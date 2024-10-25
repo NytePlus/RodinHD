@@ -1,21 +1,22 @@
 export PATH=/usr/local/cuda/bin:~/.local/bin:$PATH
-save_dir=/path/to/save_triplane_and_mlp
-data_root=/path/to/data
-fitting_obj_list=/path/to/fitting_obj_list.txt
-rm -rf ${save_dir}
-mkdir -p ${save_dir}
+save_dir=/home/wcc/RodinHD/data/save_triplane_and_mlp_300
+data_root=/home/wcc/RodinHD/data/raw_data_300
+fitting_obj_list=/home/wcc/RodinHD/data/fitting_obj_list_300.txt
+ckpt_dir=latest
 python main.py \
     ${fitting_obj_list} \
     ${save_dir} \
     --workspace ${save_dir} \
     -O \
-    --start_idx 0 --end_idx 256 \
-    --bound 1.0 --scale 0.6 --dt_gamma 0 \
+    --start_idx 0 --end_idx 31 \
+    --bound 1.0 --scale 0.4 --dt_gamma 0 \
     --triplane_channels 32 \
-    --ckpt "scratch" \
+    --ckpt ${ckpt_dir} \
     --data_root ${data_root} \
-    --out_loop_eps 30 --iters 6000 --lr0 2e-2 --lr1 2e-3 --eval_freq 5 \
-    --l1_reg_weight 1e-6 \
-    --tv_weight 2e-4 \
-    --dist_weight 2e-5 \
-    --iwc_weight 0.1
+    --out_loop_eps 30 --iters 5000 --lr0 2e-3 --lr1 2e-4 --eval_freq 10 \
+    --l1_reg_weight 1e-4 \
+    --tv_weight 1e-2 \
+    --dist_weight 0 \
+    --iwc_weight 0.1 \
+    --num_rays 2048 \
+    --num_steps 512 --upsample_steps 512
