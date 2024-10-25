@@ -26,7 +26,7 @@ class _grid_encode(Function):
     @custom_fwd
     def forward(ctx, inputs, embeddings, offsets, per_level_scale, base_resolution, calc_grad_inputs=False, gridtype=0, align_corners=False, interpolation=0):
         # inputs: [B, D], float in [0, 1]
-        # embeddings: [sO, C], float
+        # embeddings: [sO = 512 * 512 * 3, C], float
         # offsets: [L + 1], int
         # RETURN: [B, F], float
 

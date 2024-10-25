@@ -36,6 +36,7 @@ _backend = load(name='_freqencoder',
                     'freqencoder.cu',
                     'bindings.cpp',
                 ]],
+                verbose=True
                 )
 
 __all__ = ['_backend']
