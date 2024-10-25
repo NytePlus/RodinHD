@@ -181,7 +181,9 @@ class _march_rays_train(Function):
             xyzs: float, [M, 3], all generated points' coords. (all rays concated, need to use `rays` to extract points belonging to each ray)
             dirs: float, [M, 3], all generated points' view dirs.
             deltas: float, [M, 2], all generated points' deltas. (first for RGB, second for Depth)
-            rays: int32, [N, 3], all rays' (index, point_offset, point_count), e.g., xyzs[rays[i, 1]:rays[i, 2]] --> points belonging to rays[i, 0]
+            rays: int32, [N, 3], all rays' (index, point_offset, point_count), e.g., xyzs[rays[i, 1]:rays[i, 1] + rays[i, 2]] --> points belonging to rays[i, 0]
+        Should have density_grid. ~~For rays=[[x1, y1, z1], [x2, y2, z2]...], x does not guarantee increment.~~ Comment by Nyte.
+        I modify the C++ code, now x & y increase strictly.
         '''
 
         if not rays_o.is_cuda: rays_o = rays_o.cuda()
@@ -214,7 +216,7 @@ class _march_rays_train(Function):
             noises = torch.rand(N, dtype=rays_o.dtype, device=rays_o.device)
         else:
             noises = torch.zeros(N, dtype=rays_o.dtype, device=rays_o.device)
-        
+
         _backend.march_rays_train(rays_o, rays_d, density_bitfield, bound, dt_gamma, max_steps, N, C, H, M, nears, fars, xyzs, dirs, deltas, rays, step_counter, noises) # m is the actually used points number
 
         #print(step_counter, M)

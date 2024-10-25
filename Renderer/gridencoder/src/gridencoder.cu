@@ -97,7 +97,7 @@ __global__ void kernel_grid(
     const uint32_t interp
 ) {
     const uint32_t b = blockIdx.x * blockDim.x + threadIdx.x;
-    
+
     if (b >= B) return;
 
     const uint32_t level = (b < Num_points) ? 0 : (b < 2 * Num_points) ? 1 : 2;
@@ -403,7 +403,7 @@ void grid_encode_forward_cuda(const float *inputs, const scalar_t *embeddings, c
         case 3: kernel_grid_wrapper<scalar_t, 3>(inputs, embeddings, offsets, outputs, B, C, L, S, H, Num_points, dy_dx, gridtype, align_corners, interp); break;
         case 4: kernel_grid_wrapper<scalar_t, 4>(inputs, embeddings, offsets, outputs, B, C, L, S, H, Num_points, dy_dx, gridtype, align_corners, interp); break;
         case 5: kernel_grid_wrapper<scalar_t, 5>(inputs, embeddings, offsets, outputs, B, C, L, S, H, Num_points, dy_dx, gridtype, align_corners, interp); break;
-        default: throw std::runtime_error{"GridEncoding: C must be 1, 2, 4, or 8."};
+        default: throw std::runtime_error{"GridEncoding: D must be 2, 3, 4, or 5."};
     }   
 }
 
@@ -475,6 +475,9 @@ void grid_encode_forward(const at::Tensor inputs, const at::Tensor embeddings, c
     CHECK_IS_INT(offsets);
     CHECK_IS_FLOATING(outputs);
     // CHECK_IS_FLOATING(dy_dx);
+    TORCH_CHECK(!inputs.isnan().any().item<bool>() && !inputs.isinf().any().item<bool>(), "inputs contains NaN or Inf values.");
+    TORCH_CHECK(!embeddings.isnan().any().item<bool>() && !embeddings.isinf().any().item<bool>(), "embeddings contains NaN or Inf values.");
+
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(
     embeddings.scalar_type(), "grid_encode_forward", ([&] {

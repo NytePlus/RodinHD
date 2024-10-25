@@ -93,6 +93,7 @@ class NeRFNetwork(NeRFRenderer):
 
 
     def forward(self, x, d):
+        print('nerf\\network\\forward')
         # x: [N, 3], in [-bound, bound]
         # d: [N, 3], nomalized in [-1, 1]
 
@@ -163,6 +164,7 @@ class NeRFNetwork(NeRFRenderer):
     def color(self, x, d, mask=None, geo_feat=None, **kwargs):
         # x: [N, 3] in [-bound, bound]
         # mask: [N,], bool, indicates where we actually needs to compute rgb.
+        print('nerf\\network\\color')
 
         if mask is not None:
             rgbs = torch.zeros(mask.shape[0], 3, dtype=x.dtype, device=x.device) # [N, 3]

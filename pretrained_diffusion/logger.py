@@ -449,12 +449,14 @@ def configure(dir=None, format_strs=None, comm=None, log_suffix=""):
     """
     If comm is provided, average all numerical stats across that comm
     """
+    print(f'logdir: {dir}')
     if dir is None:
         dir = os.getenv("LOGDIR")
  
     assert isinstance(dir, str)
     dir = os.path.expanduser(dir)
     rank = get_rank_without_mpi_import()
+    print(f'makedir dir: {os.path.expanduser(dir)}')
     if rank == 0:
         os.makedirs(os.path.expanduser(dir), exist_ok=True)
 

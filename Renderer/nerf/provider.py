@@ -2,6 +2,7 @@ import os
 import cv2
 import glob
 import json
+import concurrent
 from cv2 import transform
 import tqdm
 import numpy as np
@@ -13,7 +14,7 @@ import trimesh
 import math
 
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 
 from .utils import get_rays
 
@@ -21,6 +22,7 @@ from .utils import get_rays
 # ref: https://github.com/NVlabs/instant-ngp/blob/b76004c8cf478880227401ae763be4c02f80b62f/include/neural-graphics-primitives/nerf_loader.h#L50
 def nerf_matrix_to_ngp(pose, scale=0.33, offset=[0, 0, 0]):
     # for the fox dataset, 0.33 scales camera radius to ~ 2
+    # for the facescape dataset, 0.4 scales camera radius to ~ 2
     new_pose = np.array([
         [pose[1, 0], -pose[1, 1], -pose[1, 2], pose[1, 3] * scale + offset[0]],
         [pose[2, 0], -pose[2, 1], -pose[2, 2], pose[2, 3] * scale + offset[1]],
@@ -29,6 +31,14 @@ def nerf_matrix_to_ngp(pose, scale=0.33, offset=[0, 0, 0]):
     ], dtype=np.float32)
     return new_pose
 
+def nerf_matrix_scale_translate(pose, scale=0.4, offset=[0, 0, 0]):
+    new_pose = np.array([
+        [pose[0, 0], pose[0, 1], pose[0, 2], pose[0, 3] * scale + offset[2]],
+        [pose[1, 0], pose[1, 1], pose[1, 2], pose[1, 3] * scale + offset[0]],
+        [pose[2, 0], pose[2, 1], pose[2, 2], pose[2, 3] * scale + offset[1]],
+        [0, 0, 0, 1],
+    ], dtype=np.float32)
+    return new_pose
 
 def spiral(radius=1):
     return lambda theta, phi : [
@@ -51,8 +61,8 @@ def gen_path_spiral(pos_gen, at=(0, 0, 0), up=(0, -1, 0), frames=180, drange=360
 
 def circle(radius=3.5, h=0.0, axis='z', t0=0, r=1):
     if axis == 'z':
-        # return lambda t: [radius * np.cos(r * t + t0), radius * np.sin(r * t + t0), h]
-        return lambda t: [radius * np.cos(r * t + t0), h, radius * np.sin(r * t + t0)][::-1]
+        return lambda t: [radius * np.cos(r * t + t0), radius * np.sin(r * t + t0), h]
+        # return lambda t: [radius * np.cos(r * t + t0), h, radius * np.sin(r * t + t0)][::-1]
     elif axis == 'y':
         return lambda t: [radius * np.cos(r * t + t0), h, radius * np.sin(r * t + t0)]
     else:
@@ -126,7 +136,7 @@ def cat(x, axis=1):
     return np.concatenate(x, axis=axis)
 
 
-def visualize_poses(poses, size=0.1):
+def visualize_poses(poses, save_path, size=0.1):
     # poses: [B, 4, 4]
 
     axes = trimesh.creation.axis(axis_length=4)
@@ -135,6 +145,9 @@ def visualize_poses(poses, size=0.1):
     objects = [axes, box]
 
     for pose in poses:
+        if isinstance(pose, torch.Tensor):
+            pose = pose.detach().numpy()
+
         # a camera is visualized with 8 line segments.
         pos = pose[:3, 3]
         a = pos + size * pose[:3, 0] + size * pose[:3, 1] + size * pose[:3, 2]
@@ -150,7 +163,7 @@ def visualize_poses(poses, size=0.1):
         segs = trimesh.load_path(segs)
         objects.append(segs)
 
-    trimesh.Scene(objects).show()
+    trimesh.Scene(objects).export(save_path)
 
 
 def rand_poses(size, device, radius=1, theta_range=[np.pi/3, 2*np.pi/3], phi_range=[0, 2*np.pi]):
@@ -260,11 +273,19 @@ class NeRFDataset:
             center = torch.mean(scene_bbox, dim=0)
             radius = torch.norm(scene_bbox[1]-center)*1.45
             up = [0, -1 ,0]
+            print(f'radius: {radius} gt_pose: {self.collect_gt_poses()[0]}')
 
-            # pos_gen = circle(radius=radius, h=-0.2, axis='z', t0=80) #105
-            # self.poses = gen_path(pos_gen, at=(0., 0.4, 0.), up=up, frames=60)
-            pos_gen = spiral(radius=radius)
-            self.poses = gen_path_spiral(pos_gen, at=(0.,0.4,0.), up=up,frames=60)
+            pos_gen = circle(radius=radius, h=0, axis='y', t0=80) #105
+            self.poses = gen_path(pos_gen, at=(0., 0., 0.), up=up, frames=60)
+            # pos_gen = spiral(radius=radius)
+            # self.poses = gen_path_spiral(pos_gen, at=(0.,0.4,0.), up=up,frames=60)
+            # self.poses = self.collect_gt_poses()
+
+            self.poses = [nerf_matrix_scale_translate(pose, scale=self.scale, offset=self.offset) for pose in self.poses]
+
+            visualize_poses(self.poses, os.path.join(self.save_dir, 'poses.glb'))
+            visualize_poses(self.collect_gt_poses(), os.path.join(self.save_dir, 'gt_poses.glb'))
+
             self.images = None
 
             with open(os.path.join(self.root_path,  'metadata_000000.json'), 'r') as f:
@@ -286,6 +307,8 @@ class NeRFDataset:
             self.W = w
             self.H = h
 
+            if num_train_frames is None:
+                num_train_frames = round(len(os.listdir(self.root_path)) / 2)
             frames = list(range(0,  num_train_frames)) if (self.training or self.type == 'test_all') else list(range(0,  5))
   
             def load_data(i):  
@@ -293,10 +316,9 @@ class NeRFDataset:
                 with open(camera_path, 'r') as f:  
                     camera_ = json.load(f)['cameras'][0]  
             
-                pose = np.array(camera_['transformation'], dtype=np.float32) # assume [4, 4]  
-                pose[:3, 3] = pose[:3, 3]/23.  
+                pose = np.array(camera_['transformation'], dtype=np.float32) # assume [4, 4]
             
-                pose = nerf_matrix_to_ngp(pose, scale=self.scale, offset=self.offset)  
+                pose = nerf_matrix_to_ngp(pose, scale=self.scale, offset=self.offset)
             
                 image_path = os.path.join(self.root_path,  'img_proc_fg_{:06d}.png'.format(i))  
                 image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED) # [H, W, 3] o [H, W, 4]  
@@ -324,7 +346,6 @@ class NeRFDataset:
         self.poses = torch.from_numpy(np.stack(self.poses, axis=0)) # [N, 4, 4]
         if self.images is not None:
             self.images = torch.from_numpy(np.stack(self.images, axis=0)) # [N, H, W, C]
-        
         # calculate mean radius of all camera poses
         #print(f'[INFO] dataset camera poses: radius = {self.radius:.4f}, bound = {self.bound}')
 
@@ -358,6 +379,16 @@ class NeRFDataset:
     
         self.intrinsics = np.array([self.focal_x, self.focal_y, cx, cy])
 
+    def collect_gt_poses(self):
+        poses = []
+        for i in list(range(0, round(len(os.listdir(self.root_path)) / 2))):
+            camera_path = os.path.join(self.root_path, 'metadata_{:06d}.json'.format(i))
+            with open(camera_path, 'r') as f:
+                camera_ = json.load(f)['cameras'][0]
+            pose = np.array(camera_['transformation'], dtype=np.float32)  # assume [4, 4]
+            pose = nerf_matrix_to_ngp(pose, scale=self.scale, offset=self.offset)
+            poses.append(pose)
+        return poses
 
     def collate(self, index):
 
@@ -365,7 +396,7 @@ class NeRFDataset:
 
         # random pose without gt images.
         if self.rand_pose == 0 or index[0] >= len(self.poses):
-
+            print('random pose without gt images.')
             poses = rand_poses(B, self.device, radius=self.radius)
 
             # sample a low-resolution but full image for CLIP
@@ -404,16 +435,72 @@ class NeRFDataset:
         if error_map is not None:
             results['index'] = index
             results['inds_coarse'] = rays['inds_coarse']
-            
+
         return results
 
-    def dataloader(self):
+    def collate_rays(self, index, triplane):
+
+        B = len(index)  # a list of length 1
+
+        # Deactivate no gt by Nyte.
+        # random pose without gt images.
+        # if self.rand_pose == 0 or index[0] >= len(self.poses):
+        #     print('random pose without gt images.')
+        #     poses = rand_poses(B, self.device, radius=self.radius)
+        #
+        #     # sample a low-resolution but full image for CLIP
+        #     s = np.sqrt(self.H * self.W / self.num_rays)  # only in training, assert num_rays > 0
+        #     rH, rW = int(self.H / s), int(self.W / s)
+        #     rays = get_rays(poses, self.intrinsics / s, rH, rW, -1)
+        #     rays_o, rays_d = rays['rays_o'].reshape(-1, 3), rays['rays_d'].reshape(-1, 3)
+        #
+        #     return [{
+        #         'H': rH,
+        #         'W': rW,
+        #         'rays_o': ray_o,
+        #         'rays_d': ray_d,
+        #         'triplane_id': triplane_index,
+        #     } for ray_o, ray_d in zip(rays_o, rays_d)]
+
+        poses = self.poses[index].to('cpu')  # [B, 4, 4]
+
+        error_map = None if self.error_map is None else self.error_map[index]
+
+        rays = get_rays(poses, self.intrinsics, self.H, self.W, self.num_rays, error_map, self.opt.patch_size)
+        rays_o, rays_d, inds = rays['rays_o'].reshape(-1, 3), rays['rays_d'].reshape(-1, 3), rays['inds'].reshape(-1)
+
+        if self.images is not None:
+            image = self.images[index].to('cpu')  # [1, H, W, 3/4]
+            if self.training:
+                C = image.shape[-1]
+                image = image.reshape(-1, C)    # [H * W, 3/4]
+
+        # print(f'rays_o: {rays_o.shape} inds: {inds.shape} image[i]: {image[inds].shape}')   #[6144, 3], [1, 6144], [2048, 4]
+
+        results = {
+            'rays_o': rays_o,
+            'rays_d': rays_d,
+            'rgbs': image[inds],
+        }
+
+        # Deactivate error map by Nyte.
+        # need inds to update error_map
+        # if error_map is not None:
+        #     inds_coarse = rays['inds_coarse'].reshape(-1)
+        #     for result, ind_coarse in zip(results, inds_coarse):
+        #         result['inds_coarse'] = ind_coarse
+        # del poses
+
+        return results
+
+    def dataloader(self, shuffle_rays = False):
         size = len(self.poses)
         if self.training and self.rand_pose > 0:
             size += size // self.rand_pose # index >= size means we use random pose.
-        loader = DataLoader(list(range(size)), batch_size=1, collate_fn=self.collate, shuffle=self.training, num_workers=0)
-        loader._data = self # an ugly fix... we need to access error_map & poses in trainer.
-        loader.has_gt = self.images is not None
+        if not shuffle_rays:
+            loader = DataLoader(list(range(size)), batch_size=1, collate_fn=self.collate, shuffle=self.training, num_workers=0)
+            loader._data = self # an ugly fix... we need to access error_map & poses in trainer.
+            loader.has_gt = self.images is not None
 
         triplane_path = os.path.join(self.save_dir, self.subject_id+'.npy')
         if os.path.exists(triplane_path):
@@ -423,8 +510,18 @@ class NeRFDataset:
                 triplane = torch.as_tensor(triplane, dtype=torch.float32)
                 
         else:
+            print("Creating triplane as {}".format(triplane_path))
             triplane = 0.1*torch.randn((3, self.triplane_channels, self.triplane_resolution, self.triplane_resolution))
-       
+
+        if shuffle_rays: # use random shuffle rays.
+            rays_o, rays_d, rgbs = [], [], []
+            for idx in list(range(size)):
+                result = self.collate_rays([idx], triplane)
+                rays_o.append(result['rays_o'])
+                rays_d.append(result['rays_d'])
+                rgbs.append(result['rgbs'])
+            return rays_o, rays_d, rgbs, triplane.to(torch.float32)
+
         if self.training:
             iwc_state_path = os.path.join(self.save_dir, self.subject_id+'_iwc_state.ckpt')
             if os.path.exists(iwc_state_path):
@@ -437,3 +534,31 @@ class NeRFDataset:
             return loader, triplane.to(torch.float32), iwc_state
         else:
             return loader, triplane.to(torch.float32)
+
+# Store ray and triplane reference by Nyte.
+class RayTriplaneRefDataset(Dataset):
+    def __init__(self, rays_o, rays_d, rgbs, triplanes, batch_size):
+        self.rays_o = rays_o
+        self.rays_d = rays_d
+        self.rgbs = rgbs
+        self.triplanes = triplanes
+        self.batch_size = batch_size
+        self.num_avatars = len(triplanes)
+
+        assert len(rays_o) == len(rays_d) == len(rgbs) == len(triplanes), "Tensors and lists must have the same length"
+        assert batch_size % self.num_avatars == 0, 'batch_size should be a multiple of num_avatars.'
+
+    def __len__(self):
+        return self.rays_o.shape[1]
+
+    def __getitem__(self, idx):
+        return self.rays_o[:, idx], self.rays_d[:, idx], self.rgbs[:, idx], self.triplanes
+
+    def loader(self):
+        # Overwrite collate_fn to avoid torch.stack()
+        # which deepcopy a triplane. We should keep the reference
+        def custom_collate_fn(batch):
+            rays_o_batch, rays_d_batch, rgbs_batch, triplanes_batch = zip(*batch) # tuple
+            return torch.cat(rays_o_batch), torch.cat(rays_d_batch), \
+                torch.cat(rgbs_batch), self.triplanes
+        return DataLoader(self, batch_size = self.batch_size // self.num_avatars, shuffle = True, collate_fn = custom_collate_fn)

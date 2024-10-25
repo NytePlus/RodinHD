@@ -402,8 +402,14 @@ __global__ void kernel_march_rays_train(
     //printf("[n=%d] num_steps=%d, near=%f, far=%f, dt=%f, max_steps=%f\n", n, num_steps, near, far, dt_min, (far - near) / dt_min);
 
     // second pass: really locate and write points & dirs
-    uint32_t point_index = atomicAdd(counter, num_steps);
-    uint32_t ray_index = atomicAdd(counter + 1, 1);
+    // uint32_t point_index = atomicAdd(counter, num_steps);
+
+    // uint32_t ray_index = atomicAdd(counter + 1, 1);
+
+    // make point_index increase with n by Nyte. Allocate fixed position for thread data.
+    uint32_t point_index = n * max_steps;
+    atomicAdd(counter, num_steps);
+    uint32_t ray_index = n;
     
     //printf("[n=%d] num_steps=%d, point_index=%d, ray_index=%d\n", n, num_steps, point_index, ray_index);
 

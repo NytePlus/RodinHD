@@ -117,10 +117,10 @@ def get_rays(poses, intrinsics, H, W, N=-1, error_map=None, patch_size=1):
         i = torch.gather(i, -1, inds)
         j = torch.gather(j, -1, inds)
 
-        results['inds'] = inds
-
     else:
         inds = torch.arange(H*W, device=device).expand([B, H*W])
+
+    results['inds'] = inds
 
     zs = torch.ones_like(i)
     xs = (i - cx) / fx * zs
@@ -435,10 +435,9 @@ class Trainer(object):
                 print(*args, file=self.log_ptr)
                 self.log_ptr.flush() # write immediately to file
 
-    ### ------------------------------	
+    ### ------------------------------
 
     def train_step(self, triplane, data):
-
         rays_o = data['rays_o'] # [B, N, 3]
         rays_d = data['rays_d'] # [B, N, 3]
 
@@ -456,7 +455,7 @@ class Trainer(object):
             #torch_vis_2d(pred_rgb[0])
 
             loss = self.clip_loss(pred_rgb)
-            
+
             return pred_rgb, None, loss
 
         images = data['images'] # [B, N, 3/4]
@@ -481,7 +480,7 @@ class Trainer(object):
 
         outputs = self._model(triplane, rays_o, rays_d, staged=False, bg_color=bg_color, perturb=True, force_all_rays=False if self.opt.patch_size == 1 else True, **vars(self.opt))
         pred_rgb = outputs['image']
-    
+
         # MSE loss
         loss = self.criterion(pred_rgb, gt_rgb).mean(-1) # [B, N, 3] --> [B, N]
 
@@ -516,7 +515,7 @@ class Trainer(object):
             #     cv2.imwrite(os.path.join(self.workspace, f'{self.global_step}.jpg'), (tmp * 255).astype(np.uint8))
 
             error = loss.detach().to(error_map.device) # [B, N], already in [0, 1]
-            
+
             # ema update
             ema_error = 0.1 * error_map.gather(1, inds) + 0.9 * error
             error_map.scatter_(1, inds, ema_error)
@@ -525,7 +524,7 @@ class Trainer(object):
             self.error_map[index] = error_map
 
         loss = loss.mean()
- 
+
         return pred_rgb, gt_rgb, loss
 
     def eval_step(self, triplane, data):
@@ -639,10 +638,11 @@ class Trainer(object):
 
         # get a ref to error_map
         self.error_map = train_loader._data.error_map
-        
+
         for epoch in range(self.epoch + 1, max_epochs + 1):
             self.epoch = epoch
             # self.evaluate_one_epoch(triplane, valid_loader)
+
             self.train_one_epoch(triplane, train_loader, iwc_state)
 
             # if self.workspace is not None and self.local_rank == 0:
@@ -654,6 +654,8 @@ class Trainer(object):
                     self.save_checkpoint(full=False, best=False)
 
         self.evaluate_one_epoch(triplane, valid_loader)
+        if self.local_rank == 0:
+            self.save_checkpoint(full=False, best=False)
 
         decoder_state = {}
         decoder_state.update(self.model.named_parameters())
@@ -846,6 +848,7 @@ class Trainer(object):
         return outputs
 
     def train_one_epoch(self, triplane_, loader):
+        print('nerf\\Utils\\train_one_epoch.')
         self.log(f"==> Start Training Epoch {self.epoch}, lr={self.optimizer.param_groups[0]['lr']:.6f} ...")
 
         total_loss = 0
@@ -854,7 +857,6 @@ class Trainer(object):
                 metric.clear()
 
         self.model.train()
-
         # distributedSampler: must call set_epoch() to shuffle indices across multiple epochs
         # ref: https://pytorch.org/docs/stable/data.html
         if self.world_size > 1:
@@ -872,7 +874,6 @@ class Trainer(object):
             
             triplane = triplane.reshape(3,1,32,512,512)
 
-            
             # update grid every 16 steps
             if self.model.cuda_ray and self.global_step % self.opt.update_extra_interval == 0:
                 with torch.cuda.amp.autocast(enabled=self.fp16):
@@ -905,8 +906,8 @@ class Trainer(object):
                         metric.update(preds, truths)
                         
                 if self.use_tensorboardX:
-                    self.writer.add_scalar("train/loss", loss_val, self.global_step)
-                    self.writer.add_scalar("train/lr", self.optimizer.param_groups[0]['lr'], self.global_step)
+                    self.writer.add_scalar(f'train/loss', loss_val, self.global_step)
+                    self.writer.add_scalar(f'train/lr', self.optimizer.param_groups[0]['lr'], self.global_step)
 
                 if self.scheduler_update_every_step:
                     pbar.set_description(f"loss={loss_val:.4f} ({total_loss/self.local_step:.4f}), lr={self.optimizer.param_groups[0]['lr']:.6f}")

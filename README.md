@@ -8,10 +8,18 @@ https://github.com/user-attachments/assets/2961c3b8-43d5-4bdf-8852-a7545c507dfb
 
 ## Environment Setup
 We recommend using Anaconda to create a new environment and install the dependencies. Our code is tested with Python 3.8 on Linux. Our model is trained and can be inferred using NVIDIA V100 GPUs.
+
+~~```
+conda env create -n rodinhd python=3.8```~~
 ```
-conda env create -n rodinhd python=3.8
+conda create -n rodinhd python=3.9
 conda activate rodinhd
 pip install -r requirements.txt
+
+cd Renderer
+pip install -r requirements.txt
+
+conda install mpi4py
 ```
 
 ## Data Preparation

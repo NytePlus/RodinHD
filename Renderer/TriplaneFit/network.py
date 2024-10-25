@@ -16,7 +16,6 @@ import raymarching
 
 from gridencoder import GridEncoder
 
-
 class NeRFNetwork(NeRFRenderer):
     def __init__(self,
                  resolution=[128] * 3,
@@ -132,6 +131,7 @@ class NeRFNetwork(NeRFRenderer):
         """
         N, M, C = coordinates.shape
         n_planes, _, _ = planes.shape
+        # print(f'coordinates.shape: {coordinates.shape} planes.shape: {planes.shape}')
         coordinates = coordinates.unsqueeze(1).expand(-1, n_planes, -1, -1).reshape(N*n_planes, M, 3)
         if inv_planes is not None:
             inv_planes = inv_planes.unsqueeze(0).expand(N, -1, -1, -1).reshape(N*n_planes, 3, 3)
@@ -142,19 +142,44 @@ class NeRFNetwork(NeRFRenderer):
  
     def get_color_feat(self, triplane, x):
         mat_coord = self.project_onto_planes(self.plane_axes, x.unsqueeze(0), self.inv_planes)
-        mat_feat =  torch.mean(self.grid_sample(triplane, mat_coord, self.bound), 0)
+        # print(f'mat_coord: {mat_coord.shape}') # [3, N_sampled, 2]
+        mat_feat = torch.mean(self.grid_sample(triplane, mat_coord, self.bound), 0)
         return mat_feat
 
   
     # def forward(self, triplane, x, d):
-    def forward_sample(self, triplane, x, d):
+    def forward_sample(self, triplane, x, d, rays = None):
         # x: [N, 3], in [-bound, bound]
         # d: [N, 3], nomalized in [-1, 1]
         # normalize to [-1, 1] inside aabb_train
         x = 2 * (x - self.aabb_train[:3]) / (self.aabb_train[3:] - self.aabb_train[:3]) - 1
        
         # rgb
-        sampled_feat = self.get_color_feat(triplane, x)
+        if isinstance(triplane, (list, tuple)):
+            assert rays is not None, 'Should pass rays if use random shuffle rays by Nyte.'
+            # print(f'x: {x.shape[0]} r: {rays[:, 2].sum()} max_i: {rays[:, 1].max()}') # only part of x is used
+
+            # CUDA stream implementation by Nyte. Average 0.6s/it. It seems that CUDA stream is much cheaper than multithread.
+            # We have 64 triplanes, each build a CUDA stream. It is slow one ray one stream.
+            # Should sort rays, to match rgbs and x & d one by one
+            num_rays_per_triplane = rays.shape[0] // len(triplane)
+            futures, d_list = [], []
+            for i, t in enumerate(triplane):
+                l, r = i * num_rays_per_triplane, (i + 1) * num_rays_per_triplane
+                L, R = rays[l, 1], rays[r, 1] if r < len(rays) else len(x)
+                d_list.append(d[L: R])
+                with torch.cuda.stream(torch.cuda.Stream()):
+                    futures.append(self.get_color_feat(t, x[L: R]))
+
+            torch.cuda.synchronize()
+            sampled_feat = torch.cat(futures)
+            d = torch.cat(d_list)
+
+            # Serial implementation. Average 1.3s/it
+            # sampled_feat = torch.cat([self.get_color_feat(triplane[ri[0]], x[ri[1]: ri[1] + ri[2]]) for ri in rays])
+            # d = torch.cat([d[ri[1] : ri[1] + ri[2]] for ri in rays])
+        else:
+            sampled_feat = self.get_color_feat(triplane, x)
 
         enc_color_feat = self.encoder(sampled_feat[:, :self.color_rank[0]])
         enc_sigma_feat = self.encoder_sigma(sampled_feat[:, self.color_rank[0]:])
@@ -163,7 +188,7 @@ class NeRFNetwork(NeRFRenderer):
         # sigma
         feat = self.sigma_net(enc_sigma_feat)
         sigma = trunc_exp(feat[:, 0])  
- 
+
         h = torch.cat([enc_color_feat, feat[:, 1:], enc_d], dim=-1)
         for l in range(self.num_layers):
             h = self.color_net[l](h)
@@ -181,7 +206,10 @@ class NeRFNetwork(NeRFRenderer):
         # normalize to [-1, 1] inside aabb_train
         x = 2 * (x - self.aabb_train[:3]) / (self.aabb_train[3:] - self.aabb_train[:3]) - 1
 
-        sampled_feat = self.get_color_feat(triplane, x)
+        if isinstance(triplane, (list, tuple)):
+            sampled_feat = torch.cat([self.get_color_feat(ti, xi.unsqueeze(0)) for ti, xi in zip(triplane, x)])
+        else:
+            sampled_feat = self.get_color_feat(triplane, x)
     
         enc_sigma_feat = self.encoder_sigma(sampled_feat[:,self.color_rank[0]:])
 
@@ -209,7 +237,10 @@ class NeRFNetwork(NeRFRenderer):
             d = d[mask]
 
         # rgb
-        sampled_feat = self.get_color_feat(triplane, x)
+        if isinstance(triplane, (list, tuple)):
+            sampled_feat = torch.cat([self.get_color_feat(ti, xi.unsqueeze(0)) for ti, xi in zip(triplane, x)])
+        else:
+            sampled_feat = self.get_color_feat(triplane, x)
 
         enc_color_feat = self.encoder(sampled_feat[:, :self.color_rank[0]])
         enc_sigma_feat = self.encoder_sigma(sampled_feat[:, self.color_rank[0]:])
@@ -329,3 +360,169 @@ class TVLoss(nn.Module):
 
     def _tensor_size(self,t):
         return t.size()[1]*t.size()[2]*t.size()[3]
+
+# Random shuffle rays network by Nyte.
+class NeRFNetworkPlus(NeRFNetwork):
+    def __init__(self,
+                 resolution=[128] * 3,
+                 sigma_rank=[8] * 3,
+                 color_rank=[24] * 3,
+                 bg_resolution=[512, 512],
+                 bg_rank=8,
+                 color_feat_dim=24,  # no use
+                 num_layers=3,
+                 hidden_dim=128,
+                 num_layers_bg=2,
+                 hidden_dim_bg=64,
+                 bound=1,
+                 triplane_channels=32,
+                 **kwargs
+                 ):
+        super().__init__(resolution, sigma_rank, color_rank, bg_resolution, bg_rank, color_feat_dim,
+                         num_layers, hidden_dim, num_layers_bg, hidden_dim_bg, bound, triplane_channels, **kwargs)
+        # Should set density_bitfield manually.
+        self.density_bitfield = torch.ones(self.cascade * self.grid_size ** 3 // 8, dtype=torch.uint8)  # [CAS * H * H * H // 8]
+
+    def reset_extra_state(self):
+        if not self.cuda_ray:
+            return
+        # density grid
+        self.density_grid.zero_()
+        self.mean_density = 0
+        self.iter_density = 0
+        # step counter
+        self.step_counter.zero_()
+        self.mean_count = 0
+        self.local_step = 0
+
+    @torch.no_grad()
+    def update_extra_state(self, triplane, decay=0.95, S=128):
+        # call before each epoch to update extra states.
+
+        if not self.cuda_ray:
+            return
+
+            ### update density grid
+
+        tmp_grid = - torch.ones_like(self.density_grid)
+
+        # full update.
+        if self.iter_density < 16:
+            # if True:
+            X = torch.arange(self.grid_size, dtype=torch.int32, device=self.density_bitfield.device).split(S)
+            Y = torch.arange(self.grid_size, dtype=torch.int32, device=self.density_bitfield.device).split(S)
+            Z = torch.arange(self.grid_size, dtype=torch.int32, device=self.density_bitfield.device).split(S)
+
+            for xs in X:
+                for ys in Y:
+                    for zs in Z:
+
+                        # construct points
+                        xx, yy, zz = custom_meshgrid(xs, ys, zs)
+                        coords = torch.cat([xx.reshape(-1, 1), yy.reshape(-1, 1), zz.reshape(-1, 1)],
+                                           dim=-1)  # [N, 3], in [0, 128)
+                        indices = raymarching.morton3D(coords).long()  # [N]
+                        xyzs = 2 * coords.float() / (self.grid_size - 1) - 1  # [N, 3] in [-1, 1]
+
+                        # cascading
+                        for cas in range(self.cascade):
+                            bound = min(2 ** cas, self.bound)
+                            half_grid_size = bound / self.grid_size
+                            # scale to current cascade's resolution
+                            cas_xyzs = xyzs * (bound - half_grid_size)
+                            # add noise in [-hgs, hgs]
+                            cas_xyzs += (torch.rand_like(cas_xyzs) * 2 - 1) * half_grid_size
+                            # query density
+                            sigmas = self.density(triplane, cas_xyzs)['sigma'].reshape(-1).detach()
+                            sigmas *= self.density_scale
+                            # assign
+                            tmp_grid[cas, indices] = sigmas
+
+        # partial update (half the computation)
+        # TODO: why no need of maxpool ?
+        else:
+            N = self.grid_size ** 3 // 4  # H * H * H / 4
+            for cas in range(self.cascade):
+                # random sample some positions
+                coords = torch.randint(0, self.grid_size, (N, 3),
+                                       device=self.density_bitfield.device)  # [N, 3], in [0, 128)
+                indices = raymarching.morton3D(coords).long()  # [N]
+                # random sample occupied positions
+                occ_indices = torch.nonzero(self.density_grid[cas] > 0).squeeze(-1)  # [Nz]
+                rand_mask = torch.randint(0, occ_indices.shape[0], [N], dtype=torch.long,
+                                          device=self.density_bitfield.device)
+                occ_indices = occ_indices[rand_mask]  # [Nz] --> [N], allow for duplication
+                occ_coords = raymarching.morton3D_invert(occ_indices)  # [N, 3]
+                # concat
+                indices = torch.cat([indices, occ_indices], dim=0)
+                coords = torch.cat([coords, occ_coords], dim=0)
+                # same below
+                xyzs = 2 * coords.float() / (self.grid_size - 1) - 1  # [N, 3] in [-1, 1]
+                bound = min(2 ** cas, self.bound)
+                half_grid_size = bound / self.grid_size
+                # scale to current cascade's resolution
+                cas_xyzs = xyzs * (bound - half_grid_size)
+                # add noise in [-hgs, hgs]
+                cas_xyzs += (torch.rand_like(cas_xyzs) * 2 - 1) * half_grid_size
+                # query density
+                sigmas = self.density(triplane, cas_xyzs)['sigma'].reshape(-1).detach()
+                sigmas *= self.density_scale
+                # assign
+                tmp_grid[cas, indices] = sigmas
+
+        ## max-pool on tmp_grid for less aggressive culling [No significant improvement...]
+        # invalid_mask = tmp_grid < 0
+        # tmp_grid = F.max_pool3d(tmp_grid.view(self.cascade, 1, self.grid_size, self.grid_size, self.grid_size), kernel_size=3, stride=1, padding=1).view(self.cascade, -1)
+        # tmp_grid[invalid_mask] = -1
+
+        # ema update
+        valid_mask = (self.density_grid >= 0) & (tmp_grid >= 0)
+        self.density_grid[valid_mask] = torch.maximum(self.density_grid[valid_mask] * decay, tmp_grid[valid_mask])
+        self.mean_density = torch.mean(self.density_grid.clamp(min=0)).item()  # -1 regions are viewed as 0 density.
+        # self.mean_density = torch.mean(self.density_grid[self.density_grid > 0]).item() # do not count -1 regions
+        self.iter_density += 1
+
+        # convert to bitfield
+        density_thresh = min(self.mean_density, self.density_thresh)
+        self.density_bitfield = raymarching.packbits(self.density_grid, density_thresh, self.density_bitfield)
+
+        ### update step counter
+        total_step = min(16, self.local_step)
+        if total_step > 0:
+            self.mean_count = int(self.step_counter[:total_step, 0].sum().item() / total_step)
+        self.local_step = 0
+
+    # random shuffle rays by Nyte.
+    def forward(self, triplanes, rays_o, rays_d, staged=False, max_ray_batch=4096, mean_count=0, **kwargs):
+        self.mean_count = mean_count
+
+        if self.cuda_ray:
+            _run = self.run_cuda
+        else:
+            _run = self.run
+
+        B, N = rays_o.shape[:2]
+        device = rays_o.device
+
+        # never stage when cuda_ray
+        if staged and not self.cuda_ray:
+            depth = torch.empty((B, N), device=device)
+            image = torch.empty((B, N, 3), device=device)
+
+            for b in range(B):
+                head = 0
+                while head < N:
+                    tail = min(head + max_ray_batch, N)
+                    results_ = _run(triplanes, rays_o[b:b + 1, head:tail], rays_d[b:b + 1, head:tail], **kwargs)
+                    depth[b:b + 1, head:tail] = results_['depth']
+                    image[b:b + 1, head:tail] = results_['image']
+                    head += max_ray_batch
+
+            results = {}
+            results['depth'] = depth
+            results['image'] = image
+
+        else:
+            results = _run(triplanes, rays_o, rays_d, **kwargs)
+
+        return results
