@@ -24,6 +24,7 @@ if __name__ == '__main__':
     parser.add_argument('-O', action='store_true', help="equals --fp16 --cuda_ray --preload")
     parser.add_argument('--test', action='store_true', help="test mode")
     parser.add_argument('--ray_shuffle', action='store_true', help="Nyte's modify. train random rays instead of one avatar.")
+    parser.add_argument('--no_grid', action='store_true', help="Nyte's modify. set density grid full.")
     parser.add_argument('--workspace', type=str, default='workspace')
     parser.add_argument('--seed', type=int, default=0)
     ### training options
@@ -195,9 +196,9 @@ if __name__ == '__main__':
         print(len(all_ids))
 
         optimizer_mlp = torch.optim.Adam(model.get_params(opt.lr0, opt.lr1), betas=(0.9, 0.99), eps=1e-15)
-        scheduler_mlp =  optim.lr_scheduler.LambdaLR(optimizer_mlp, lambda iter: 0.1 ** min(iter / (50*opt.iters), 1))
 
         if opt.ray_shuffle:
+            scheduler_mlp =  optim.lr_scheduler.LambdaLR(optimizer_mlp, lambda iter: 0.1 ** (iter / (opt.out_loop_eps - 1)))
             rays_o, rays_d, rgbs, triplanes, optimizers_triplane = [], [], [], [], []
             def process_subject(subject_id):
                 rays_o, rays_d, rgbs, triplane = NeRFDataset(opt,  root_path=os.path.join(opt.data_root, subject_id), save_dir=opt.save_dir,
@@ -220,6 +221,7 @@ if __name__ == '__main__':
                 rgbs.append(torch.cat(rgb).unsqueeze(0))
                 triplanes.append(triplane)
                 optimizers_triplane.append(optimizer_triplane)
+
             rays_o, rays_d, rgbs = torch.cat(rays_o), torch.cat(rays_d), torch.cat(rgbs)
             train_loader = RayTriplaneRefDataset(rays_o, rays_d, rgbs, triplanes, opt.max_ray_batch).loader()
             assert rays_d.device == rays_o.device == rgbs.device == torch.device('cpu') and triplanes[0].device != torch.device('cpu'), \
@@ -227,8 +229,7 @@ if __name__ == '__main__':
             end_time = time.time()
             print(f'Generate dataset cost {(end_time - start_time) / len(triplanes)} s/avatar.\n')
 
-            scheduler = lambda optimizer: optim.lr_scheduler.LambdaLR(optimizer,
-                                                                      lambda iter: 0.1 ** min(iter / opt.iters, 1))
+            scheduler = lambda optimizer: optim.lr_scheduler.LambdaLR(optimizer, lambda iter: 0.1 ** (iter / (opt.out_loop_eps - 1)))
 
             model.reset_extra_state()
             trainer = TrainerPlus('ngp', opt, model, local_rank=shard, world_size=num_shards, device=device,
@@ -236,25 +237,20 @@ if __name__ == '__main__':
                               optimizers_triplane=optimizers_triplane, criterion=criterion, ema_decay=None, fp16=opt.fp16,
                               lr_scheduler=scheduler, lr_scheduler_mlp=scheduler_mlp, scheduler_update_every_step=False,
                               metrics=[PSNRMeter()], use_checkpoint=opt.ckpt, eval_interval=opt.eval_freq,
-                              random_noise=opt.random_noise, random_scale=opt.random_scale)
+                              random_noise=opt.random_noise, random_scale=opt.random_scale, all_ids=all_ids)
 
-            valid_loader, triplane_ = NeRFDataset(opt, root_path=os.path.join(opt.data_root, subject_id),
+            valid_loader, _ = NeRFDataset(opt, root_path=os.path.join(opt.data_root, all_ids[0]),
                                                   save_dir=opt.save_dir, device=device, type='val',
                                                   downscale=opt.downscale, triplane_resolution=opt.resolution0,
                                                   triplane_channels=opt.triplane_channels,
                                                   num_train_frames=opt.num_train_frames).dataloader()
 
-            trainer.train(train_loader, valid_loader, triplane_, opt.out_loop_eps)
+            trainer.train(train_loader, valid_loader, triplanes[0], opt.out_loop_eps)
 
-            print('saving triplane ..')
-            with open(os.path.join(opt.save_dir, train_loader._data.subject_id + '.npy'), 'wb') as f:
-                np.save(f, triplane.detach().cpu().numpy())
-                print(triplane.min(), triplane.mean())
-            print('saving cl_state ..')
-            torch.save(iwc_state, os.path.join(opt.save_dir, train_loader._data.subject_id + '_iwc_state.ckpt'))
-
+            # I made a mistake again. I save triplane[i] here instead of triplanes[i]. I lose my training checkpoint. Comment by Nyte.
 
         else:
+            scheduler_mlp =  optim.lr_scheduler.LambdaLR(optimizer_mlp, lambda iter: 0.1 ** min(iter / (50*opt.iters), 1))
             for epoch in range(opt.out_loop_eps):
                 for subject_id in all_ids:
                     print(subject_id)
@@ -301,5 +297,5 @@ if __name__ == '__main__':
                         print('saving cl_state ..')
                         torch.save(iwc_state, os.path.join(opt.save_dir, train_loader._data.subject_id+'_iwc_state.ckpt'))
                 if shard == 0:
-                    trainer.save_checkpoint(name=f"decoder_outloop_{epoch}ep", full=False, best=False, remove_old=False)
+                    trainer.save_checkpoint(name=f"decoder_outloop_{epoch:04d}ep", full=False, best=False, remove_old=False)
 

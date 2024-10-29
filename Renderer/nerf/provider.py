@@ -508,7 +508,7 @@ class NeRFDataset:
             with open(triplane_path, 'rb') as f:
                 triplane = np.load(f)
                 triplane = torch.as_tensor(triplane, dtype=torch.float32)
-                
+                print(triplane.min(), triplane.mean())
         else:
             print("Creating triplane as {}".format(triplane_path))
             triplane = 0.1*torch.randn((3, self.triplane_channels, self.triplane_resolution, self.triplane_resolution))

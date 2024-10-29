@@ -288,6 +288,7 @@ class NeRFRenderer(nn.Module):
             xyzs, dirs, deltas, rays = raymarching.march_rays_train(rays_o, rays_d, self.bound, self.density_bitfield, self.cascade, self.grid_size, nears, fars, counter, self.mean_count, perturb, 128, force_all_rays, dt_gamma, max_steps)
             # print(f'print: {self.mean_count} xyzs: {xyzs.shape}  x: {rays_o.shape} max_steps: {max_steps} rays: {rays[0: 10]}')
             #plot_pointcloud(xyzs.reshape(-1, 3).detach().cpu().numpy())
+            results['xyzs.shape'] = xyzs.shape
 
             if isinstance(triplane, (list, tuple)):
                 sigmas, rgbs = self.forward_sample(triplane, xyzs, dirs, rays)
@@ -355,7 +356,7 @@ class NeRFRenderer(nn.Module):
                 n_step = max(min(N // n_alive, 8), 1)
 
                 xyzs, dirs, deltas = raymarching.march_rays(n_alive, n_step, rays_alive, rays_t, rays_o, rays_d, self.bound, self.density_bitfield, self.cascade, self.grid_size, nears, fars, 128, perturb if step == 0 else False, dt_gamma, max_steps)
-
+                # print(f'xyzs: {xyzs.shape} rays_o: {rays_o.shape} rays_alive:{rays_alive.shape}')
                 sigmas, rgbs = self.forward_sample(triplane, xyzs, dirs)
                 sigmas = self.density_scale * sigmas
 

@@ -1,3 +1,5 @@
+import copy
+
 from nerf.utils import *
 from nerf.utils import Trainer as _Trainer
 
@@ -285,9 +287,17 @@ class Trainer(_Trainer):
             
     def load_checkpoint(self, checkpoint=None, model_only=False):
         if checkpoint is None:
-            checkpoint_list = sorted(glob.glob(f'{self.ckpt_path}/{self.name}_ep*.pth'))
-            if checkpoint_list:
-                checkpoint = checkpoint_list[-1]
+            # Maybe I got wrong. In initial implement, we should keep workspace clean when starting training.
+            # Because Trainer only record checkpoint create in this run. So if 'ngp_ep17.pth' exist, it is always loaded.
+            # I need to pause training and restart, so I add the following line. I should remove 'decoder_outloop_*ep.pth' manually.
+            # Comment by Nyte.
+            inner_checkpoint_list = sorted(glob.glob(f'{self.ckpt_path}/{self.name}_ep*.pth'))
+            outer_checkpoint_list = sorted(glob.glob(f'{self.ckpt_path}/decoder_outloop_*ep.pth'))
+            if outer_checkpoint_list:
+                checkpoint = outer_checkpoint_list[-1]
+                self.log(f"[INFO] Latest checkpoint is {checkpoint}")
+            elif inner_checkpoint_list:
+                checkpoint = inner_checkpoint_list[-1]
                 self.log(f"[INFO] Latest checkpoint is {checkpoint}")
             else:
                 self.log("[WARN] No checkpoint found, model randomly initialized.")
@@ -340,6 +350,7 @@ class TrainerPlus(Trainer):
                  name,  # name of this experiment
                  opt,  # extra conf
                  model,  # network
+                 all_ids,
                  criterion=None,  # loss function, if None, assume inline implementation in train_step
                  optimizer_mlp=None,  # optimizer
                  optimizers_triplane=None,  # optimizers by Nyte
@@ -374,15 +385,24 @@ class TrainerPlus(Trainer):
                          use_checkpoint, use_tensorboardX, scheduler_update_every_step, random_noise, random_scale, restore)
         self.optimizers_triplane = optimizers_triplane
         self.batch_size = batch_size
+        self.all_ids = all_ids
 
         if lr_scheduler_mlp is not None:  # add by Nyte
             self.lr_scheduler_mlp = lr_scheduler_mlp
             self.lr_schedulers_triplane = [lr_scheduler(optimizer_triplane)
                                            for optimizer_triplane in self.optimizers_triplane]
 
+    def save_triplanes(self, triplanes):
+        print('saving triplanes ...')
+        for i, subject_path in enumerate(self.all_ids):
+            subject_id = subject_path.split('/')[-1]
+            with open(os.path.join(self.workspace, subject_id + '.npy'), 'wb') as f:
+                np.save(f, triplanes[i].detach().cpu().numpy())
+                print(triplanes[i].min(), triplanes[i].mean())
+
     # random shuffle rays modified by Nyte.
     def train_one_epoch(self, loader):
-        self.log(f"==> Start Training Epoch(random shuffle rays) {self.epoch}, lr={self.optimizer_mlp.param_groups[0]['lr']:.6f} ...")
+        self.log(f"==> Start Training Epoch(random shuffle rays) {self.epoch}, lr1={self.optimizer_mlp.param_groups[0]['lr']:.6f} lr0={self.optimizers_triplane[0].param_groups[0]['lr']:.6f}")
         start_time = time.time()
 
         total_loss = 0
@@ -406,9 +426,9 @@ class TrainerPlus(Trainer):
 
             # Deactivate update by Nyte.
             # update grid every 16 steps
-            # if self.model.cuda_ray and self.global_step % self.opt.update_extra_interval == 0:
-            #     with torch.cuda.amp.autocast(enabled=self.fp16):
-            #         self.model.update_extra_state(triplane)
+            if self.model.cuda_ray and not self.opt.no_grid and self.global_step % self.opt.update_extra_interval == 0:
+                with torch.cuda.amp.autocast(enabled=self.fp16):
+                    self.model.update_extra_state(loader.dataset.triplanes[0])
 
             self.local_step += 1
             self.global_step += 1
@@ -418,7 +438,7 @@ class TrainerPlus(Trainer):
                 optimizer_triplane.zero_grad()
 
             with torch.cuda.amp.autocast(enabled=self.fp16):
-                pred_rgb, gt_rgb, loss = self.train_step(data)
+                pred_rgb, gt_rgb, loss, xyz_shape = self.train_step(data)
 
             self.scaler.scale(loss).backward()
             self.scaler.step(self.optimizer_mlp)
@@ -447,9 +467,9 @@ class TrainerPlus(Trainer):
                         lr0 = ([optimizer_triplane.param_groups[0]['lr'] for optimizer_triplane in self.optimizers_triplane])
                         lr0_max, lr0_min = max(lr0), min(lr0)
                         pbar.set_description(
-                            f"loss={loss_val:.4f} ({total_loss / self.local_step:.4f}), lr={self.optimizer_mlp.param_groups[0]['lr']:.6f} , lr=[{lr0_min:.6f}, {lr0_max:.6f}]")
+                            f"loss={loss_val:.4f} ({total_loss / self.local_step:.4f}), lr={self.optimizer_mlp.param_groups[0]['lr']:.6f} , lr=[{lr0_min:.6f}, {lr0_max:.6f}], xyz.shape={xyz_shape}")
                     else:
-                        pbar.set_description(f"loss={loss_val:.4f} ({total_loss / self.local_step:.4f})")
+                        pbar.set_description(f"loss={loss_val:.4f} ({total_loss / self.local_step:.4f}) xyz.shape={xyz_shape}")
                     pbar.update(1)
 
         # Deactivate all regularization by Nyte.
@@ -515,9 +535,9 @@ class TrainerPlus(Trainer):
 
         # change mean_count by Nyte.
         outputs = self.model(triplanes, rays_o, rays_d, staged=False, bg_color=bg_color, perturb=True,
-                             mean_count=rays_o.shape[0] * self.opt.max_steps,
                               force_all_rays=False if self.opt.patch_size == 1 else True, **vars(self.opt))
         pred_rgbs = outputs['image']
+        xyz_shape = outputs['xyzs.shape']
 
         # MSE loss
         loss = self.criterion(pred_rgbs, gt_rgbs).mean(-1)  # [B, 3] --> [B]
@@ -557,7 +577,7 @@ class TrainerPlus(Trainer):
 
         loss = loss.mean()
 
-        return pred_rgbs, gt_rgbs, loss
+        return pred_rgbs, gt_rgbs, loss, xyz_shape
 
     # random shuffle rays modified by Nyte.
     def train(self, train_loaders, valid_loader, valid_triplane, max_epochs):
@@ -577,11 +597,13 @@ class TrainerPlus(Trainer):
                     self.evaluate_one_epoch(valid_triplane, valid_loader)
                 if self.local_rank == 0:
                     self.save_checkpoint(full=False, best=False)
+                    self.save_triplanes(train_loaders.dataset.triplanes)
 
         if valid_loader is not None:
             self.evaluate_one_epoch(valid_triplane, valid_loader)
         if self.local_rank == 0:
             self.save_checkpoint(full=False, best=False)
+            self.save_triplanes(train_loaders.dataset.triplanes)
 
         # Deactivate all the regulation by Nyte.
         # decoder_state = {}

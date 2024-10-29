@@ -51,7 +51,6 @@ class _grid_encode(Function):
             dy_dx = torch.empty(B, D * C, device=inputs.device, dtype=embeddings.dtype)
         else:
             dy_dx = None
-
         _backend.grid_encode_forward(inputs, embeddings, offsets, outputs, B, D, C, L, S, H, B//3, dy_dx, gridtype, align_corners, interpolation)
 
         ctx.save_for_backward(inputs, embeddings, offsets, dy_dx)
