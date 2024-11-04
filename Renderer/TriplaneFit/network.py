@@ -406,7 +406,6 @@ class NeRFNetworkPlus(NeRFNetwork):
             self.mean_count = rays_o.shape[0] * kwargs.get('max_steps', 512)
             self.density_bitfield = torch.ones(self.cascade * self.grid_size ** 3 // 8, dtype=torch.uint8).fill_(
                 -1)  # [CAS * H * H * H // 8]
-
         if self.cuda_ray:
             _run = self.run_cuda
         else:
