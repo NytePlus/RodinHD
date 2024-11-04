@@ -1,5 +1,5 @@
 export PATH=/usr/local/cuda/bin:~/.local/bin:$PATH
-save_dir=/home/wcc/RodinHD/data/save_triplane_and_mlp_300_test
+save_dir=/home/wcc/RodinHD/data/save_triplane_and_mlp_300_pro_plus
 data_root=/home/wcc/RodinHD/data/raw_data_300
 fitting_obj_list=/home/wcc/RodinHD/data/fitting_obj_list_300.txt
 ckpt_dir=latest
@@ -18,9 +18,8 @@ python main.py \
     --tv_weight 1e-2 \
     --dist_weight 0 \
     --iwc_weight 0.1 \
-    --num_rays 65536 \
+    --num_rays -1 \
     --num_steps 512 --upsample_steps 512 \
     --ray_shuffle \
     --max_ray_batch 4096 \
-    --update_extra_interval 1 \
-    --no_grid
+    --update_extra_interval 1
