@@ -1,0 +1,74 @@
+nohup: ignoring input
+Using /data1/wcc/.cache/torch_extensions/py39_cu117 as PyTorch extensions root...
+Detected CUDA files, patching ldflags
+Emitting ninja build file /data1/wcc/.cache/torch_extensions/py39_cu117/_raymarching/build.ninja...
+Building extension module _raymarching...
+Allowing ninja to set a default number of workers... (overridable by setting the environment variable MAX_JOBS=N)
+ninja: no work to do.
+Loading extension module _raymarching...
+Using /data1/wcc/.cache/torch_extensions/py39_cu117 as PyTorch extensions root...
+Detected CUDA files, patching ldflags
+Emitting ninja build file /data1/wcc/.cache/torch_extensions/py39_cu117/_grid_encoder/build.ninja...
+Building extension module _grid_encoder...
+Allowing ninja to set a default number of workers... (overridable by setting the environment variable MAX_JOBS=N)
+ninja: no work to do.
+Loading extension module _grid_encoder...
+Using /data1/wcc/.cache/torch_extensions/py39_cu117 as PyTorch extensions root...
+Detected CUDA files, patching ldflags
+Emitting ninja build file /data1/wcc/.cache/torch_extensions/py39_cu117/_freqencoder/build.ninja...
+Building extension module _freqencoder...
+Allowing ninja to set a default number of workers... (overridable by setting the environment variable MAX_JOBS=N)
+Namespace(path='/home/wcc/RodinHD/data/fitting_obj_list_300.txt', save_dir='/home/wcc/RodinHD/data/save_triplane_and_mlp_300_plus', data_root='/home/wcc/RodinHD/data/raw_data_300', O=True, test=False, ray_shuffle=True, workspace='/home/wcc/RodinHD/data/save_triplane_and_mlp_300_plus', seed=0, iters=5000, lr0=0.02, lr1=0.002, ckpt='latest', num_rays=8192, cuda_ray=True, max_steps=1024, num_steps=512, update_extra_interval=16, upsample_steps=512, max_ray_batch=4096, l1_reg_weight=0.0001, tv_weight=0.01, dist_weight=0.0, iwc_weight=0.1, patch_size=1, fp16=True, cp=False, triplane_channels=32, downscale=1, resolution0=512, resolution1=512, upsample_model_steps=[], grid_size=256, color_space='srgb', preload=True, bound=1.0, scale=0.4, offset=[0, 0, 0], dt_gamma=0.0, min_near=0.2, density_thresh=10, bg_radius=-1, gui=False, W=1920, H=1080, radius=5, fovy=50, max_spp=64, num_train_frames=300, out_loop_eps=30, eval_freq=10, no_tqdm=False, random_noise=False, random_scale=False, error_map=False, clip_text='', rand_pose=-1, start_idx=0, end_idx=1, eval_video=False)
+Render using grid size:  256
+ninja: no work to do.
+Loading extension module _freqencoder...
+NeRFNetworkPlus(
+  (grid_sample): GridEncoder: input_dim=2 num_levels=3 level_dim=32 resolution=512 -> 512 per_level_scale=1.0000 gridtype=tiled align_corners=True interpolation=linear
+  (encoder): FreqEncoder: input_dim=24 degree=2 output_dim=120
+  (encoder_sigma): FreqEncoder: input_dim=8 degree=2 output_dim=40
+  (encoder_dir): FreqEncoder: input_dim=3 degree=2 output_dim=15
+  (color_net): ModuleList(
+    (0): Linear(in_features=263, out_features=128, bias=False)
+    (1): Linear(in_features=128, out_features=128, bias=False)
+    (2): Linear(in_features=128, out_features=3, bias=False)
+  )
+  (sigma_net): Sequential(
+    (0): Linear(in_features=40, out_features=128, bias=True)
+    (1): Softplus(beta=1, threshold=20)
+    (2): Linear(in_features=128, out_features=129, bias=True)
+  )
+)
+1
+Creating triplane as /home/wcc/RodinHD/data/save_triplane_and_mlp_300_plus/1_1_neutral.npy
+cpu cpu cpu cuda:0
+Generate dataset cost 4.440316600569834e-06 s/avatar.
+
+[INFO] Trainer: ngp | 2024-10-25_06-43-24 | cuda:0 | fp16 | 
+/home/wcc/RodinHD/data/save_triplane_and_mlp_300_plus
+[INFO] #parameters: 72321
+[INFO] Loading latest checkpoint ...
+[WARN] No checkpoint found, model randomly initialized.
+Creating triplane as /home/wcc/RodinHD/data/save_triplane_and_mlp_300_plus/1_1_neutral.npy
+==> Start Training Epoch(random shuffle rays) 1, lr=0.002000 ...
+  0% 0/600 [00:00<?, ?it/s]patch: 1
+print: 4194304 xyzs: torch.Size([4194432, 3])  x: torch.Size([4096, 3]) max_steps: 1024
+4096 torch.Size([4096, 3])
+waiting...Traceback (most recent call last):
+  File "/data1/wcc/RodinHD/Renderer/main.py", line 249, in <module>
+    trainer.train(train_loader, valid_loader, triplane_, opt.out_loop_eps)
+  File "/data1/wcc/RodinHD/Renderer/TriplaneFit/utils.py", line 573, in train
+    self.train_one_epoch(train_loaders)
+  File "/data1/wcc/RodinHD/Renderer/TriplaneFit/utils.py", line 421, in train_one_epoch
+    pred_rgb, gt_rgb, loss = self.train_step(data)
+  File "/data1/wcc/RodinHD/Renderer/TriplaneFit/utils.py", line 517, in train_step
+    outputs = self.model(triplanes, rays_o, rays_d, staged=False, bg_color=bg_color, perturb=True,
+  File "/home/wcc/anaconda3/envs/rodinhd/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/data1/wcc/RodinHD/Renderer/TriplaneFit/network.py", line 397, in forward
+    results = _run(triplanes, rays_o, rays_d, **kwargs)
+  File "/data1/wcc/RodinHD/Renderer/nerf/renderer.py", line 293, in run_cuda
+    sigmas, rgbs = self.forward_sample(triplane, xyzs, dirs, rays)
+  File "/data1/wcc/RodinHD/Renderer/TriplaneFit/network.py", line 161, in forward_sample
+    input('waiting...')
+OSError: [Errno 9] Bad file descriptor
+  0% 0/600 [00:00<?, ?it/s]

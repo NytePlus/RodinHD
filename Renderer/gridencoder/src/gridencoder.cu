@@ -475,6 +475,9 @@ void grid_encode_forward(const at::Tensor inputs, const at::Tensor embeddings, c
     CHECK_IS_INT(offsets);
     CHECK_IS_FLOATING(outputs);
     // CHECK_IS_FLOATING(dy_dx);
+    TORCH_CHECK(!inputs.isnan().any().item<bool>() && !inputs.isinf().any().item<bool>(), "inputs contains NaN or Inf values.");
+    TORCH_CHECK(!embeddings.isnan().any().item<bool>() && !embeddings.isinf().any().item<bool>(), "embeddings contains NaN or Inf values.");
+
 
     // Bug check by Nyte.
     TORCH_CHECK(!inputs.isnan().any().item<bool>() && !inputs.isinf().any().item<bool>(), "inputs contains NaN or Inf values.");
