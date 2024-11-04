@@ -79,7 +79,6 @@ def get_rays(poses, intrinsics, H, W, N=-1, error_map=None, patch_size=1):
 
         # if use patch-based sampling, ignore error_map
         if patch_size > 1:
-
             # random sample left-top cores.
             # NOTE: this impl will lead to less sampling on the image corner pixels... but I don't have other ideas.
             num_patch = N // (patch_size ** 2)
@@ -101,7 +100,6 @@ def get_rays(poses, intrinsics, H, W, N=-1, error_map=None, patch_size=1):
             inds = torch.randint(0, H*W, size=[N], device=device) # may duplicate
             inds = inds.expand([B, N])
         else:
-
             # weighted sample on a low-reso grid
             inds_coarse = torch.multinomial(error_map.to(device), N, replacement=False) # [B, N], but in [0, 128*128)
 
