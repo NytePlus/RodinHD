@@ -15,8 +15,6 @@ from mpi4py import MPI
 from torch.utils.data import DataLoader
 
 if __name__ == '__main__':
-    torch.cuda.empty_cache()
-    gc.collect()
     parser = argparse.ArgumentParser()
     parser.add_argument('path', type=str)
     parser.add_argument('save_dir', type=str)    
@@ -104,7 +102,8 @@ if __name__ == '__main__':
     print(opt)
     seed_everything(opt.seed)
 
-    dist_util.setup_dist() 
+    dist_util.setup_dist()
+    print('setup done.')
 
     if opt.ray_shuffle:
         NeRFNetwork_ = NeRFNetworkPlus
@@ -128,7 +127,7 @@ if __name__ == '__main__':
     print(model)
 
     criterion = torch.nn.MSELoss(reduction='none')
-    device =  dist_util.dev()
+    device = dist_util.dev()
 
     if opt.test:
         shard=MPI.COMM_WORLD.Get_rank()
@@ -193,7 +192,7 @@ if __name__ == '__main__':
         shard=MPI.COMM_WORLD.Get_rank()
         num_shards=MPI.COMM_WORLD.Get_size()
         all_ids = all_files[shard:][::num_shards]
-        print(len(all_ids))
+        print(f'shard {shard}/{num_shards} processing {len(all_ids)} avatars.')
 
         optimizer_mlp = torch.optim.Adam(model.get_params(opt.lr0, opt.lr1), betas=(0.9, 0.99), eps=1e-15)
 
@@ -222,7 +221,9 @@ if __name__ == '__main__':
                 triplanes.append(triplane)
                 optimizers_triplane.append(optimizer_triplane)
 
-            rays_o, rays_d, rgbs = torch.cat(rays_o), torch.cat(rays_d), torch.cat(rgbs)
+            rays_o = torch.cat(rays_o)
+            rays_d = torch.cat(rays_d)
+            rgbs = torch.cat(rgbs)
             train_loader = RayTriplaneRefDataset(rays_o, rays_d, rgbs, triplanes, opt.max_ray_batch).loader()
             assert rays_d.device == rays_o.device == rgbs.device == torch.device('cpu') and triplanes[0].device != torch.device('cpu'), \
                 f'Wrong device with {rays_d.device} {rays_o.device} {rgbs.device} {triplanes[0].device}.'
