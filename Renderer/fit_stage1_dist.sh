@@ -1,13 +1,11 @@
 export PATH=/usr/local/cuda/bin:~/.local/bin:$PATH
-<<<<<<< HEAD
-save_dir=/home/wcc/RodinHD/data/save_triplane_and_mlp_300_test
-=======
-save_dir=/home/wcc/RodinHD/data/save_triplane_and_mlp_300
->>>>>>> 6b4cfec032ab6316cf39ce9e841acee535310d7f
+export OMP_NUM_THREADS=4
+export MAX_JOBS=2
+save_dir=/home/wcc/RodinHD/data/save_triplane_and_mlp_dist
 data_root=/home/wcc/RodinHD/data/raw_data_300
 fitting_obj_list=/home/wcc/RodinHD/data/fitting_obj_list_300.txt
 ckpt_dir=latest
-python main.py \
+torchrun --nproc_per_node=3 --nnodes=1 --node_rank=0 main.py \
     ${fitting_obj_list} \
     ${save_dir} \
     --workspace ${save_dir} \
@@ -25,5 +23,5 @@ python main.py \
     --num_rays -1 \
     --num_steps 512 --upsample_steps 512 \
     --ray_shuffle \
-    --max_ray_batch 8192 \
+    --max_ray_batch 1 \
     --update_extra_interval 1
