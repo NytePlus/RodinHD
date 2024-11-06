@@ -321,7 +321,10 @@ class NeRFDataset:
                 pose = nerf_matrix_to_ngp(pose, scale=self.scale, offset=self.offset)
             
                 image_path = os.path.join(self.root_path,  'img_proc_fg_{:06d}.png'.format(i))  
-                image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED) # [H, W, 3] o [H, W, 4]  
+                image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED) # [H, W, 3] o [H, W, 4]
+                if image is None:
+                    print(f'Damaged file: {image_path}')
+                    return load_data(i - 1) if i > 0 else load_data(i + 1)
             
                 # add support for the alpha channel as a mask.  
                 if image.shape[-1] == 3:   
