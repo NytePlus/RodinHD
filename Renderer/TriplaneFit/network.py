@@ -130,6 +130,7 @@ class NeRFNetwork(NeRFRenderer):
         # returns projections of shape N*n_planes, M, 2
         """
         N, M, C = coordinates.shape
+        # print(f'coordinates: {coordinates.shape} planes: {planes.shape}')
         n_planes, _, _ = planes.shape
         # print(f'coordinates.shape: {coordinates.shape} planes.shape: {planes.shape}')
         coordinates = coordinates.unsqueeze(1).expand(-1, n_planes, -1, -1).reshape(N*n_planes, M, 3)
@@ -137,6 +138,7 @@ class NeRFNetwork(NeRFRenderer):
             inv_planes = inv_planes.unsqueeze(0).expand(N, -1, -1, -1).reshape(N*n_planes, 3, 3)
         else:
             inv_planes = torch.linalg.inv(planes).unsqueeze(0).expand(N, -1, -1, -1).reshape(N*n_planes, 3, 3)
+        # print(f'coordinates: {coordinates.shape} inv_planes: {inv_planes.shape}')
         projections = torch.bmm(coordinates, inv_planes)
         return projections[..., :2]
  
@@ -164,11 +166,13 @@ class NeRFNetwork(NeRFRenderer):
             # Should sort rays, to match rgbs and x & d one by one
             streams = [torch.cuda.current_stream()] + [torch.cuda.Stream() for _ in range(len(triplane) - 1)]
             num_rays_per_triplane = rays.shape[0] // len(triplane)
+            # print(f'rays: {rays.shape} lentri: {len(triplane)} n: {num_rays_per_triplane}')
             futures = [None] * len(triplane)
             for i, t in enumerate(triplane):
                 l, r = i * num_rays_per_triplane, (i + 1) * num_rays_per_triplane
                 L, R = rays[l, 1], rays[r, 1] if r < len(rays) else len(x)
                 assert L != R, 'L == R!!'
+                # print(f'i: {i} L: {L} R: {R} rays: {rays} R: {rays[r, 1] if r < len(rays) else -1}')
                 with torch.cuda.stream(streams[i]):
                     futures[i] = self.get_color_feat(t, x[L: R])
 
@@ -185,6 +189,7 @@ class NeRFNetwork(NeRFRenderer):
             #     sampled_feat_list.append(self.get_color_feat(t, x[L: R]))
             # sampled_feat = torch.cat(sampled_feat_list)
         else:
+            # print(f'tri: {triplane.isnan().any()} x: {x.shape}')
             sampled_feat = self.get_color_feat(triplane, x)
 
         enc_color_feat = self.encoder(sampled_feat[:, :self.color_rank[0]])
@@ -387,25 +392,15 @@ class NeRFNetworkPlus(NeRFNetwork):
         super().__init__(resolution, sigma_rank, color_rank, bg_resolution, bg_rank, color_feat_dim,
                          num_layers, hidden_dim, num_layers_bg, hidden_dim_bg, bound, triplane_channels, **kwargs)
 
-    # def reset_extra_state(self):
-    #     if not self.cuda_ray:
-    #         return
-    #     # density grid
-    #     self.density_grid.fill_(-1)
-    #     self.mean_density = 0
-    #     self.iter_density = 0
-    #     # step counter
-    #     self.step_counter.zero_()
-    #     self.mean_count = 0
-    #     self.local_step = 0
-
     # random shuffle rays by Nyte.
     def forward(self, triplanes, rays_o, rays_d, staged=False, max_ray_batch=4096, **kwargs):
+        # print(f'aabb1: {self.aabb_train}')
         if kwargs.get('no_grid', False):
             # Should set density_bitfield manually.
             self.mean_count = rays_o.shape[0] * kwargs.get('max_steps', 512)
-            self.density_bitfield = torch.ones(self.cascade * self.grid_size ** 3 // 8, dtype=torch.uint8).fill_(
-                -1)  # [CAS * H * H * H // 8]
+            self.density_bitfield\
+                = - torch.ones(self.cascade * self.grid_size ** 3 // 8, dtype=torch.uint8)  # [CAS * H * H * H // 8]
+        # print(f'aabb2: {self.aabb_train}')
         if self.cuda_ray:
             _run = self.run_cuda
         else:
@@ -429,7 +424,6 @@ class NeRFNetworkPlus(NeRFNetwork):
                     head += max_ray_batch
 
             results = {}
-            results['xyzs.shape'] = results_['xyzs.shape']
             results['depth'] = depth
             results['image'] = image
 

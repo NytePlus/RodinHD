@@ -555,13 +555,13 @@ class RayTriplaneRefDataset(Dataset):
         return self.rays_o.shape[1]
 
     def __getitem__(self, idx):
-        return self.rays_o[:, idx], self.rays_d[:, idx], self.rgbs[:, idx], self.triplanes
+        return self.rays_o[:, idx], self.rays_d[:, idx], self.rgbs[:, idx]
 
     def loader(self):
         # Overwrite collate_fn to avoid torch.stack()
         # which deepcopy a triplane. We should keep the reference
         def custom_collate_fn(batch):
-            rays_o_batch, rays_d_batch, rgbs_batch, triplanes_batch = zip(*batch) # tuple
+            rays_o_batch, rays_d_batch, rgbs_batch = zip(*batch) # tuple
             return torch.cat(rays_o_batch), torch.cat(rays_d_batch), \
                 torch.cat(rgbs_batch), self.triplanes
         return DataLoader(self, batch_size = self.batch_size // self.num_avatars, shuffle = True, collate_fn = custom_collate_fn)
