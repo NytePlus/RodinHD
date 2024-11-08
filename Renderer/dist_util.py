@@ -25,7 +25,6 @@ def setup_dist():
 
     comm = MPI.COMM_WORLD
     print(f"Comm size: {MPI.COMM_WORLD.Get_size()}, Rank: {MPI.COMM_WORLD.Get_rank()}")
-    print(f'GPUS_PER_NODE: {GPUS_PER_NODE} comm.size: {comm.size}')
     backend = "gloo" if not th.cuda.is_available() else "nccl"
 
     if backend == "gloo":
@@ -40,9 +39,7 @@ def setup_dist():
     if not os.environ.get("MASTER_PORT"):
         os.environ["MASTER_PORT"] = str(port)
     th.cuda.set_device(dev())
-    print('set device done.')
     dist.init_process_group(backend=backend, init_method="env://")
-    print('init done.')
 
 
 def dev():

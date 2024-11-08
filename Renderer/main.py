@@ -241,7 +241,6 @@ if __name__ == '__main__':
                               random_noise=opt.random_noise, random_scale=opt.random_scale, all_ids=all_ids)
 
             valid_loader, _ = NeRFDataset(opt, root_path=os.path.join(opt.data_root, all_ids[0]),
-
                                                   save_dir=opt.save_dir, device=device, type='val',
                                                   downscale=opt.downscale, triplane_resolution=opt.resolution0,
                                                   triplane_channels=opt.triplane_channels,

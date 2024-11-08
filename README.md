@@ -71,6 +71,11 @@ cd Renderer
 sh fit_stage1.sh
 ```
 
+If you want to support distributed single machine multi card training(for stage 1), run the following script:
+```bash
+CUDA_VISIBLE_DEVICES=2,3,4 sh fit_stage1_dist.sh
+```
+
 Then we fix the shared feature decoder and fit each triplane per object using:
 ```bash
 sh fit_stage2.sh

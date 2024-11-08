@@ -752,7 +752,6 @@ __global__ void kernel_march_rays(
     t += clamp(t * dt_gamma, dt_min, dt_max) * noise;
 
     float last_t = t;
-
     while (t < far && step < n_step) {
         // current point
         const float x = clamp(ox + t * dx, -bound, bound);
@@ -773,7 +772,7 @@ __global__ void kernel_march_rays(
         const int nz = clamp(0.5 * (z * mip_rbound + 1) * H, 0.0f, (float)(H - 1));
 
         const uint32_t index = level * H3 + __morton3D(nx, ny, nz);
-        const bool occ = grid[index / 8] & (1 << (index % 8));
+        const bool occ = grid[index / 8] & (1 << (index % 8));//Nyte. I cannot find bug.
 
         // if occpuied, advance a small step, and write to output
         if (occ) {
