@@ -267,8 +267,9 @@ class NeRFRenderer(nn.Module):
         device = rays_o.device
 
         # pre-calculate near far
+        # print(f'selfaabb_train: {self.aabb_train}')
         nears, fars = raymarching.near_far_from_aabb(rays_o, rays_d, self.aabb_train if self.training else self.aabb_infer, self.min_near)
-
+        # print(f'nears: {nears} far: {fars}')
         # mix background color
         if self.bg_radius > 0:
             # use the bg model to calculate bg_color
@@ -288,7 +289,8 @@ class NeRFRenderer(nn.Module):
             xyzs, dirs, deltas, rays = raymarching.march_rays_train(rays_o, rays_d, self.bound, self.density_bitfield, self.cascade, self.grid_size, nears, fars, counter, self.mean_count, perturb, 128, force_all_rays, dt_gamma, max_steps)
             # print(f'print: {self.mean_count} xyzs: {xyzs.shape}  x: {rays_o.shape} max_steps: {max_steps} rays: {rays[0: 10]}')
             #plot_pointcloud(xyzs.reshape(-1, 3).detach().cpu().numpy())
-            results['xyzs.shape'] = xyzs.shape
+            results['rays[:, 2].min'] = rays[:, 2].min()
+            results['rays[:, 2].max'] = rays[:, 2].max()
 
             if isinstance(triplane, (list, tuple)):
                 sigmas, rgbs = self.forward_sample(triplane, xyzs, dirs, rays)
@@ -354,9 +356,11 @@ class NeRFRenderer(nn.Module):
 
                 # decide compact_steps
                 n_step = max(min(N // n_alive, 8), 1)
-
+                
                 xyzs, dirs, deltas = raymarching.march_rays(n_alive, n_step, rays_alive, rays_t, rays_o, rays_d, self.bound, self.density_bitfield, self.cascade, self.grid_size, nears, fars, 128, perturb if step == 0 else False, dt_gamma, max_steps)
-                # print(f'xyzs: {xyzs.shape} rays_o: {rays_o.shape} rays_alive:{rays_alive.shape}')
+                # Nyte: after marching rays, triplane and xyzs appear nan. There should be segmentation fault. But not caused by my modify.
+
+                print(f'tri: {triplane.isnan().any()} xyzs: {xyzs.isnan().any()} {xyzs.shape} dirs: {dirs.isnan().any()}')
                 sigmas, rgbs = self.forward_sample(triplane, xyzs, dirs)
                 sigmas = self.density_scale * sigmas
 

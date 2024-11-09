@@ -342,6 +342,9 @@ class _march_rays(Function):
             noises = torch.rand(n_alive, dtype=rays_o.dtype, device=rays_o.device)
         else:
             noises = torch.zeros(n_alive, dtype=rays_o.dtype, device=rays_o.device)
+        print(f'M: {M} n_step: {n_step} n_alive: {n_alive} ray_ablive: {rays_alive} bound: {bound} dt_gamma: {dt_gamma} max_steps: {max_steps} C: {C} H: {H} den: {density_bitfield.shape}')
+        print(
+            f'rays_t: {rays_t.isnan().any()} rays_o: {rays_o.isnan().any()} rays_d: {rays_d.isnan().any()}')
 
         _backend.march_rays(n_alive, n_step, rays_alive, rays_t, rays_o, rays_d, bound, dt_gamma, max_steps, C, H, density_bitfield, near, far, xyzs, dirs, deltas, noises)
 

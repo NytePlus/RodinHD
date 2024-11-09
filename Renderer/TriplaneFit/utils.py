@@ -398,7 +398,7 @@ class TrainerPlus(Trainer):
             subject_id = subject_path.split('/')[-1]
             with open(os.path.join(self.workspace, subject_id + '.npy'), 'wb') as f:
                 np.save(f, triplanes[i].detach().cpu().numpy())
-                print(triplanes[i].min(), triplanes[i].mean())
+                print(triplanes[i].min(), triplanes[i].max())
 
     # random shuffle rays modified by Nyte.
     def train_one_epoch(self, loader):
@@ -438,7 +438,7 @@ class TrainerPlus(Trainer):
                 optimizer_triplane.zero_grad()
 
             with torch.cuda.amp.autocast(enabled=self.fp16):
-                pred_rgb, gt_rgb, loss, xyz_shape = self.train_step(data)
+                pred_rgb, gt_rgb, loss, rays_len_max, rays_len_min = self.train_step(data)
 
             self.scaler.scale(loss).backward()
             self.scaler.step(self.optimizer_mlp)
@@ -467,9 +467,9 @@ class TrainerPlus(Trainer):
                         lr0 = ([optimizer_triplane.param_groups[0]['lr'] for optimizer_triplane in self.optimizers_triplane])
                         lr0_max, lr0_min = max(lr0), min(lr0)
                         pbar.set_description(
-                            f"loss={loss_val:.4f} ({total_loss / self.local_step:.4f}), lr={self.optimizer_mlp.param_groups[0]['lr']:.6f} , lr=[{lr0_min:.6f}, {lr0_max:.6f}], xyz.shape={xyz_shape}")
+                            f"loss={loss_val:.4f} ({total_loss / self.local_step:.4f}), lr={self.optimizer_mlp.param_groups[0]['lr']:.6f} , lr=[{lr0_min:.6f}, {lr0_max:.6f}], rays_len_max={rays_len_max}")
                     else:
-                        pbar.set_description(f"loss={loss_val:.4f} ({total_loss / self.local_step:.4f}) xyz.shape={xyz_shape}")
+                        pbar.set_description(f"loss={loss_val:.4f} ({total_loss / self.local_step:.4f}) rays_len=[{rays_len_min}, {rays_len_max}]")
                     pbar.update(1)
 
         # Deactivate all regularization by Nyte.
@@ -537,7 +537,8 @@ class TrainerPlus(Trainer):
         outputs = self.model(triplanes, rays_o, rays_d, staged=False, bg_color=bg_color, perturb=True,
                               force_all_rays=False if self.opt.patch_size == 1 else True, **vars(self.opt))
         pred_rgbs = outputs['image']
-        xyz_shape = outputs['xyzs.shape']
+        rays_len_min = outputs['rays[:, 2].min']
+        rays_len_max = outputs['rays[:, 2].max']
 
         # MSE loss
         loss = self.criterion(pred_rgbs, gt_rgbs).mean(-1)  # [B, 3] --> [B]
@@ -577,7 +578,7 @@ class TrainerPlus(Trainer):
 
         loss = loss.mean()
 
-        return pred_rgbs, gt_rgbs, loss, xyz_shape
+        return pred_rgbs, gt_rgbs, loss, rays_len_max, rays_len_min
 
     # random shuffle rays modified by Nyte.
     def train(self, train_loaders, valid_loader, valid_triplane, max_epochs):
@@ -597,13 +598,13 @@ class TrainerPlus(Trainer):
                     self.evaluate_one_epoch(valid_triplane, valid_loader)
                 if self.local_rank == 0:
                     self.save_checkpoint(full=False, best=False)
-                    self.save_triplanes(train_loaders.dataset.triplanes)
+                self.save_triplanes(train_loaders.dataset.triplanes)
 
         if valid_loader is not None:
             self.evaluate_one_epoch(valid_triplane, valid_loader)
         if self.local_rank == 0:
             self.save_checkpoint(full=False, best=False)
-            self.save_triplanes(train_loaders.dataset.triplanes)
+        self.save_triplanes(train_loaders.dataset.triplanes)
 
         # Deactivate all the regulation by Nyte.
         # decoder_state = {}
