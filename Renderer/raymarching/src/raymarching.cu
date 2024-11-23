@@ -773,7 +773,7 @@ __global__ void kernel_march_rays(
 
         const uint32_t index = level * H3 + __morton3D(nx, ny, nz);
         const bool occ = grid[index / 8] & (1 << (index % 8));//Nyte. I cannot find bug.
-        printf("%d\n", occ ? 1 : 2);
+        //printf("%d\n", occ ? 1 : 2);
 
         // if occpuied, advance a small step, and write to output
         if (occ) {
