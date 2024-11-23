@@ -143,12 +143,22 @@ class NeRFNetwork(NeRFRenderer):
         return projections[..., :2]
  
     def get_color_feat(self, triplane, x):
+        import time
+        start = time.time()
         mat_coord = self.project_onto_planes(self.plane_axes, x.unsqueeze(0), self.inv_planes)
+        print(f'project time: {time.time() - start}')
+        start = time.time()
         # print(f'mat_coord: {mat_coord.shape}') # [3, N_sampled, 2]
         mat_feat = torch.mean(self.grid_sample(triplane, mat_coord, self.bound), 0)
+        print(f'grid sample time: {time.time() - start}')
+        print(f'mat_coord: {mat_coord.shape} mat_feat: {mat_feat.shape}')
         return mat_feat
 
-  
+    def get_color_feat_batch(self, triplanes, x, rays):
+        mat_coord = self.project_onto_planes(self.plane_axes, x.unsqueeze(0), self.inv_planes)
+        mat_feat = torch.mean(self.grid_sample(triplane, mat_coord, rays, self.bound), 0)
+        return mat_feat
+
     # def forward(self, triplane, x, d):
     def forward_sample(self, triplane, x, d, rays = None):
         # x: [N, 3], in [-bound, bound]
@@ -164,22 +174,26 @@ class NeRFNetwork(NeRFRenderer):
             # CUDA stream implementation by Nyte. Average 0.6s/it. It seems that CUDA stream is much cheaper than multithread.
             # We have 64 triplanes, each build a CUDA stream. It is slow one ray one stream.
             # Should sort rays, to match rgbs and x & d one by one
-            streams = [torch.cuda.current_stream()] + [torch.cuda.Stream() for _ in range(len(triplane) - 1)]
-            num_rays_per_triplane = rays.shape[0] // len(triplane)
-            # print(f'rays: {rays.shape} lentri: {len(triplane)} n: {num_rays_per_triplane}')
-            futures = [None] * len(triplane)
-            for i, t in enumerate(triplane):
-                l, r = i * num_rays_per_triplane, (i + 1) * num_rays_per_triplane
-                L, R = rays[l, 1], rays[r, 1] if r < len(rays) else len(x)
-                assert L != R, 'L == R!!'
-                # print(f'i: {i} L: {L} R: {R} rays: {rays} R: {rays[r, 1] if r < len(rays) else -1}')
-                with torch.cuda.stream(streams[i]):
-                    futures[i] = self.get_color_feat(t, x[L: R])
-
-            for stream in streams:
-                stream.synchronize()
-            sampled_feat = torch.cat(futures)
+            import time
+            start = time.time()
+            # streams = [torch.cuda.current_stream()] + [torch.cuda.Stream() for _ in range(len(triplane) - 1)]
+            # num_rays_per_triplane = rays.shape[0] // len(triplane)
+            # # print(f'rays: {rays.shape} lentri: {len(triplane)} n: {num_rays_per_triplane}')
+            # futures = [None] * len(triplane)
+            # for i, t in enumerate(triplane):
+            #     l, r = i * num_rays_per_triplane, (i + 1) * num_rays_per_triplane
+            #     L, R = rays[l, 1], rays[r, 1] if r < len(rays) else len(x)
+            #     assert L != R, 'L == R!!'
+            #     # print(f'i: {i} L: {L} R: {R} rays: {rays} R: {rays[r, 1] if r < len(rays) else -1}')
+            #     with torch.cuda.stream(streams[i]):
+            #         futures[i] = self.get_color_feat(t, x[L: R])
+            #
+            # for stream in streams:
+            #     stream.synchronize()
+            # sampled_feat = torch.cat(futures)
             # print(f'ft: {futures[0].shape} sf: {sampled_feat.shape} x: {x.shape} t: {len(triplane)} rays: {rays.shape}')
+            sampled_feat = self.get_color_feat(triplane, x, rays)
+            print(f'cuda stream feat: {time.time() - start} sample_feat: {sampled_feat.shape}')
 
             # Serial implementation. Average 20it/s
             # sampled_feat_list = []
@@ -192,8 +206,13 @@ class NeRFNetwork(NeRFRenderer):
             # print(f'tri: {triplane.isnan().any()} x: {x.shape}')
             sampled_feat = self.get_color_feat(triplane, x)
 
+        import time
+        start = time.time()
         enc_color_feat = self.encoder(sampled_feat[:, :self.color_rank[0]])
+        print(f'color net: {time.time() - start}')
+        start2 = time.time()
         enc_sigma_feat = self.encoder_sigma(sampled_feat[:, self.color_rank[0]:])
+        print(f'sigma net: {time.time() - start}')
         enc_d = self.encoder_dir(d)
 
         # sigma
@@ -208,6 +227,7 @@ class NeRFNetwork(NeRFRenderer):
         
         # sigmoid activation for rgb
         rgb = torch.sigmoid(h)
+        print(f'forward time: {time.time() - start}')
 
         return sigma, rgb
 

@@ -21,6 +21,6 @@ mpirun -np 4 python main.py \
     --dist_weight 0 \
     --iwc_weight 0.1 \
     --num_rays -1 --max_ray_batch 2048 \
-    --max_steps 128 --downscale 64 \
+    --max_steps 512 --downscale 64 \
     --ray_shuffle \
     --no_grid
