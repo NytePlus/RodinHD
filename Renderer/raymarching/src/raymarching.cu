@@ -408,6 +408,8 @@ __global__ void kernel_march_rays_train(
 
     // make point_index increase with n by Nyte. Allocate fixed position for thread data.
     uint32_t point_index = n * max_steps;
+
+    atomicAdd(counter, num_steps);
     uint32_t ray_index = n;
     
     //printf("[n=%d] num_steps=%d, point_index=%d, ray_index=%d\n", n, num_steps, point_index, ray_index);

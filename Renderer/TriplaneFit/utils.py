@@ -292,11 +292,12 @@ class Trainer(_Trainer):
             # I need to pause training and restart, so I add the following line. I should remove 'decoder_outloop_*ep.pth' manually.
             # Comment by Nyte.
             inner_checkpoint_list = sorted(glob.glob(f'{self.ckpt_path}/{self.name}_ep*.pth'))
-            outer_checkpoint_list = sorted(glob.glob(f'{self.ckpt_path}/decoder_outloop_*ep.pth'))
-            if outer_checkpoint_list:
-                checkpoint = outer_checkpoint_list[-1]
-                self.log(f"[INFO] Latest checkpoint is {checkpoint}")
-            elif inner_checkpoint_list:
+
+            # outer_checkpoint_list = sorted(glob.glob(f'{self.ckpt_path}/decoder_outloop_*ep.pth'))
+            # if outer_checkpoint_list:
+            #     checkpoint = outer_checkpoint_list[-1]
+            #     self.log(f"[INFO] Latest checkpoint is {checkpoint}")
+            if inner_checkpoint_list:
                 checkpoint = inner_checkpoint_list[-1]
                 self.log(f"[INFO] Latest checkpoint is {checkpoint}")
             else:

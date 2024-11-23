@@ -281,7 +281,8 @@ class NeRFDataset:
             # self.poses = gen_path_spiral(pos_gen, at=(0.,0.4,0.), up=up,frames=60)
             # self.poses = self.collect_gt_poses()
 
-            self.poses = [nerf_matrix_scale_translate(pose, scale=self.scale, offset=self.offset) for pose in self.poses]
+            if self.opt.dataset == 'facescape':
+                self.poses = [nerf_matrix_scale_translate(pose, scale=self.scale, offset=self.offset) for pose in self.poses]
 
             visualize_poses(self.poses, os.path.join(self.save_dir, 'poses.glb'))
             visualize_poses(self.collect_gt_poses(), os.path.join(self.save_dir, 'gt_poses.glb'))
@@ -297,7 +298,6 @@ class NeRFDataset:
             self.W = w
             self.H = h
         else:
- 
             with open(os.path.join(self.root_path,  'metadata_000000.json'), 'r') as f:
                 self.meta = json.load(f)['cameras'][0] 
     
@@ -317,8 +317,11 @@ class NeRFDataset:
                     camera_ = json.load(f)['cameras'][0]  
             
                 pose = np.array(camera_['transformation'], dtype=np.float32) # assume [4, 4]
-            
-                pose = nerf_matrix_to_ngp(pose, scale=self.scale, offset=self.offset)
+
+                if self.opt.dataset == 'facescape':
+                    pose = nerf_matrix_to_ngp(pose, scale=self.scale, offset=self.offset)
+                elif self.opt.dataset == 'portrait3d':
+                    pose = nerf_matrix_scale_translate(pose, scale=self.scale, offset=self.offset)
             
                 image_path = os.path.join(self.root_path,  'img_proc_fg_{:06d}.png'.format(i))  
                 image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED) # [H, W, 3] o [H, W, 4]
@@ -345,7 +348,8 @@ class NeRFDataset:
                 results = list(executor.map(load_data, frames))  
             
             self.poses, self.images = zip(*results)
-            
+
+        visualize_poses(self.poses, os.path.join(self.save_dir, 'gt_poses.glb'))
         self.poses = torch.from_numpy(np.stack(self.poses, axis=0)) # [N, 4, 4]
         if self.images is not None:
             self.images = torch.from_numpy(np.stack(self.images, axis=0)) # [N, H, W, C]
@@ -389,7 +393,12 @@ class NeRFDataset:
             with open(camera_path, 'r') as f:
                 camera_ = json.load(f)['cameras'][0]
             pose = np.array(camera_['transformation'], dtype=np.float32)  # assume [4, 4]
-            pose = nerf_matrix_to_ngp(pose, scale=self.scale, offset=self.offset)
+
+            if self.opt.dataset == 'facescape':
+                pose = nerf_matrix_to_ngp(pose, scale=self.scale, offset=self.offset)
+            elif self.opt.dataset == 'portrait3d':
+                pose = nerf_matrix_scale_translate(pose, scale=self.scale, offset=self.offset)
+
             poses.append(pose)
         return poses
 

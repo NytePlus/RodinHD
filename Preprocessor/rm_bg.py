@@ -28,26 +28,25 @@ num_threads = 1
 dirs = os.listdir(base_dir)
 os.makedirs(out_dir, exist_ok=True)
 def process(i):
-    session = new_session()
+    session = new_session('birefnet-portrait')
     thread_dirs = dirs[i:][::num_threads]
     for dir in thread_dirs:
         os.makedirs(os.path.join(base_dir, dir).replace(base_dir.split('/')[-1], out_dir.split('/')[-1]), exist_ok=True)
         imgs = glob.glob(os.path.join(base_dir, dir, '*.png'))
         print(os.path.join(base_dir, dir))
+        outdir = os.path.join(base_dir, dir).replace(base_dir.split('/')[-1], out_dir.split('/')[-1])
+        if len(os.listdir(outdir)) == 300:
+            print('skip')
+            continue
         for img in tqdm(imgs):
             cv_img = cv2.imread(img)
             # remove_background_floodFill(cv_img, fill_color= [100, 98, 97])
             cv_img = remove(cv_img, bgcolor=(255, 255, 255, 255), session=session)
             cv2.imwrite(img.replace(base_dir.split('/')[-1], out_dir.split('/')[-1]), cv_img)
 
-# if num_threads > 1:
-#     with ProcessPoolExecutor(max_workers=num_threads) as executor:
-#         futures = [executor.submit(process, i) for i in range(num_threads)]
-#     result = [future.result() for future in futures]
-# else:
-#     process(0);
-session = new_session('birefnet-portrait')
-img = '/data2/wcc/stable-dreamfusion-3DPortrait/output/text_to_3dportrait/51/results_final/large_pose_final_final_4.png'
-cv_img = cv2.imread(img)
-cv_img = remove(cv_img, bgcolor=(255, 255, 255, 255), session=session)
-cv2.imwrite(img.replace('large_pose_final_final_4.png', 'nobg.png'), cv_img)
+if num_threads > 1:
+    with ProcessPoolExecutor(max_workers=num_threads) as executor:
+        futures = [executor.submit(process, i) for i in range(num_threads)]
+    result = [future.result() for future in futures]
+else:
+    process(0);
