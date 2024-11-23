@@ -144,8 +144,8 @@ class NeRFNetwork(NeRFRenderer):
  
     def get_color_feat(self, triplane, x):
         mat_coord = self.project_onto_planes(self.plane_axes, x.unsqueeze(0), self.inv_planes)
-        # print(f'mat_coord: {mat_coord.shape}') # [3, N_sampled, 2]
         mat_feat = torch.mean(self.grid_sample(triplane, mat_coord, self.bound), 0)
+        # mat_coord: [3, N_sampled, 2] mat_feat: [N_sampled, 32]
         return mat_feat
 
   
@@ -394,12 +394,11 @@ class NeRFNetworkPlus(NeRFNetwork):
 
     # random shuffle rays by Nyte.
     def forward(self, triplanes, rays_o, rays_d, staged=False, max_ray_batch=4096, **kwargs):
-        # print(f'aabb1: {self.aabb_train}')
         if kwargs.get('no_grid', False):
             # Should set density_bitfield manually.
+            # Cannot use assignment "self.density_bitfield = .." because assigned tensor is a new common tensor instead of a register buffer
             self.mean_count = rays_o.shape[0] * kwargs.get('max_steps', 512)
             self.density_bitfield.fill_(-1)  # [CAS * H * H * H // 8]
-        # print(f'aabb2: {self.aabb_train}')
         if self.cuda_ray:
             _run = self.run_cuda
         else:
