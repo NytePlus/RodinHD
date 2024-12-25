@@ -17,7 +17,7 @@ mpirun -np 8 python main.py \
     --ckpt ${ckpt} \
     --out_loop_eps 1 \
     --iters 3000  --lr1 0 --lr0 2e-3 --eval_freq 10 \
-    --num_rays 16384 --max_ray_batch 16384 \
+    --num_rays 16384 --max_ray_batch 8192 \
     --l1_reg_weight 0 \
     --tv_weight 0 \
     --dist_weight 0 \
