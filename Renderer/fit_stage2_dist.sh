@@ -9,12 +9,13 @@ mpirun -np 8 python main.py \
     ${fitting_obj_list} \
     ${save_dir} \
     --workspace ${save_dir} \
+    -finetune \
     -O --start_idx 0 --end_idx 192 \
     --bound 1.0 --scale 0.8 --dt_gamma 0 \
     --triplane_channels 32 \
     --data_root ${data_root} \
     --ckpt ${ckpt} \
-    --out_loop_eps 2 \
+    --out_loop_eps 1 \
     --iters 3000  --lr1 0 --lr0 2e-3 --eval_freq 10 \
     --num_rays 16384 --max_ray_batch 16384 \
     --l1_reg_weight 0 \

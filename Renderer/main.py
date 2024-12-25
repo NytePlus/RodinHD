@@ -30,6 +30,7 @@ if __name__ == '__main__':
     parser.add_argument('--workspace', type=str, default='workspace')
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--dataset', type=str, default='portrait3d')
+    parser.add_argument('-finetune', action='store_true', help="mark density grid to full")
     ### training options
     parser.add_argument('--iters', type=int, default=9000, help="training iters")
     parser.add_argument('--lr0', type=float, default=2e-2, help="initial learning rate for embeddings")
@@ -263,7 +264,7 @@ if __name__ == '__main__':
 
                     triplane_path = os.path.join(opt.save_dir, subject_id.split('/')[-1]+'.npy')
 
-                    if os.path.exists(triplane_path) and opt.out_loop_eps == 1:
+                    if os.path.exists(triplane_path) and not opt.finetune and opt.out_loop_eps == 1:
                         print('skip')
                         continue
 

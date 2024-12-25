@@ -1,8 +1,8 @@
 export PATH=/usr/local/cuda/bin:~/.local/bin:$PATH
-save_dir=/home/wcc/RodinHD/data/save_triplane_and_mlp2
-fitting_obj_list=/home/wcc/RodinHD/data/portrait3d_data/fitting_obj_list.txt
+save_dir=/home/wcc/RodinHD/data/save_triplane
+fitting_obj_list=/home/wcc/RodinHD/data/portrait3dexp_data/fitting_obj_list.txt
 ckpt=/home/wcc/RodinHD/data/save_triplane/checkpoints/ngp_ep0017.pth.pth
-data_root=/home/wcc/RodinHD/data/portrait3d_data
+data_root=/home/wcc/RodinHD/data/portrait3dexp_data
 python main.py \
     ${fitting_obj_list} \
     ${save_dir} \
@@ -11,7 +11,7 @@ python main.py \
     --start_idx 0 --end_idx 2 \
     --bound 1.0 --scale 0.8 --dt_gamma 0 \
     --triplane_channels 32 \
-    --ckpt ${ckpt_dir} \
+    --ckpt ${ckpt} \
     --data_root ${data_root} \
     --test \
     --eval_video

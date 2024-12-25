@@ -376,7 +376,7 @@ class NeRFRenderer(nn.Module):
                 xyzs, dirs, deltas = raymarching.march_rays(n_alive, n_step, rays_alive, rays_t, rays_o, rays_d, self.bound, self.density_bitfield, self.cascade, self.grid_size, nears, fars, 128, perturb if step == 0 else False, dt_gamma, max_steps)
                 # Nyte: after marching rays, triplane and xyzs appear nan. There should be segmentation fault. But not caused by my modify.
 
-                print(f'tri: {triplane.isnan().any()} xyzs: {xyzs.isnan().any()} {xyzs.shape} dirs: {dirs.isnan().any()}')
+                # print(f'tri: {triplane.isnan().any()} xyzs: {xyzs.isnan().any()} {xyzs.shape} dirs: {dirs.isnan().any()}')
                 sigmas, rgbs = self.forward_sample(triplane, xyzs, dirs)
                 sigmas = self.density_scale * sigmas
 
