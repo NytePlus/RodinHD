@@ -277,7 +277,7 @@ class NeRFRenderer(nn.Module):
             bg_color = self.background(sph, rays_d) # [N, 3]
         elif bg_color is None:
             bg_color = 1
-        print(f'bg_color: {bg_color}')
+        # print(f'bg_color: {bg_color}')
 
         results = {}
 
@@ -290,7 +290,7 @@ class NeRFRenderer(nn.Module):
             import time
             start = time.time()
             xyzs, dirs, deltas, rays = raymarching.march_rays_train(rays_o, rays_d, self.bound, self.density_bitfield, self.cascade, self.grid_size, nears, fars, counter, self.mean_count, perturb, 128, force_all_rays, dt_gamma, max_steps)
-            print(f'march ray time: {time.time() - start}')
+            # print(f'march ray time: {time.time() - start}')
 
             # print(f'print: {self.mean_count} xyzs: {xyzs.shape}  x: {rays_o.shape} max_steps: {max_steps} rays: {rays[0: 10]}')
             #plot_pointcloud(xyzs.reshape(-1, 3).detach().cpu().numpy())
@@ -301,7 +301,7 @@ class NeRFRenderer(nn.Module):
                 import time
                 start = time.time()
                 sigmas, rgbs = self.forward_sample(triplane, xyzs, dirs, rays)
-                print(f'forward sample time: {time.time() - start}')
+                # print(f'forward sample time: {time.time() - start}')
             else:
                 sigmas, rgbs = self.forward_sample(triplane, xyzs, dirs)
 

@@ -1,0 +1,2 @@
+[INFO] Trainer: snapshot | 2024-12-25_04-25-37 | cuda:0 | fp32 | ${save_dir}
+[INFO] #parameters: 45529829

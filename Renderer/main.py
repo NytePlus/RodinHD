@@ -1,11 +1,15 @@
 import sys
 import gc
+import os
 import time
 import torch
 import argparse
 import random
 import concurrent
 
+sys.path.append('../Wrapper')
+
+from metrics import ArcfaceLoss
 from nerf.provider import NeRFDataset, RayTriplaneRefDataset
 from TriplaneFit.network import NeRFNetwork, NeRFNetworkPlus
 from TriplaneFit.utils import *
@@ -105,6 +109,7 @@ if __name__ == '__main__':
 
     dist_util.setup_dist()
     print('setup done.')
+    device = dist_util.dev()
 
     if opt.ray_shuffle:
         NeRFNetwork_ = NeRFNetworkPlus
@@ -124,11 +129,9 @@ if __name__ == '__main__':
         color_rank=[int(opt.triplane_channels // 4 * 3)] * 3,
         triplane_channels=opt.triplane_channels,
     )
-    
     print(model)
 
-    criterion = torch.nn.MSELoss(reduction='none')
-    device = dist_util.dev()
+    criterion = torch.nn.MSELoss(reduction='mean')
 
     if opt.test:
         shard=MPI.COMM_WORLD.Get_rank()

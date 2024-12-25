@@ -539,7 +539,7 @@ class TrainerPlus(Trainer):
         start = time.time()
         outputs = self.model(triplanes, rays_o, rays_d, staged=False, bg_color=bg_color, perturb=True,
                               force_all_rays=False if self.opt.patch_size == 1 else True, **vars(self.opt))
-        print(f'total time: {time.time() - start}')
+        # print(f'total time: {time.time() - start}')
         pred_rgbs = outputs['image']
         rays_len_min = outputs['rays[:, 2].min']
         rays_len_max = outputs['rays[:, 2].max']
