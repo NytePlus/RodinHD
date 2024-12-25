@@ -122,10 +122,19 @@ class ImageDataset(Dataset):
 
     def __getitem__(self, idx):
         path = self.local_images[idx]
+        #! to modify
         with open(path, 'rb') as f:
             triplane = np.load(f).astype(np.float32)
  
+        #? modified
+        from scipy.ndimage import zoom  
+        zoom_factors = (1, 1, 1, 128/512, 128/512)
+        triplane = zoom(triplane, zoom_factors, order=3)  # order=3 表示双三次插值
+        #? modified
         triplane = th.as_tensor(triplane)
+
+        
+
         triplane = triplane.reshape(3,32,self.resolution,self.resolution)
         triplane = th.cat([triplane[0], triplane[1], triplane[2]], -1)
 

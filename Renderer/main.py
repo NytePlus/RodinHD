@@ -25,7 +25,7 @@ if __name__ == '__main__':
     parser.add_argument('--no_grid', action='store_true', help="Nyte's modify. set density grid full.")
     parser.add_argument('--workspace', type=str, default='workspace')
     parser.add_argument('--seed', type=int, default=0)
-    parser.add_argument('--dataset', type=str, default='facescape')
+    parser.add_argument('--dataset', type=str, default='portrait3d')
     ### training options
     parser.add_argument('--iters', type=int, default=9000, help="training iters")
     parser.add_argument('--lr0', type=float, default=2e-2, help="initial learning rate for embeddings")
@@ -288,10 +288,7 @@ if __name__ == '__main__':
 
                         max_epoch = np.ceil(opt.iters / len(train_loader)).astype(np.int32)
                         print(f'outer loop: {epoch} trainer.epoch: {trainer.epoch} \nmax epoch: {max_epoch} len(train loader): {len(train_loader)}')
-                        ref_triplane = triplane.clone()
                         trainer.train(train_loader, valid_loader, max_epoch, triplane, iwc_state)
-                        if (ref_triplane != triplane).any():
-                            print('triplane does changes..')
 
                         print('saving triplane ..')
                         with open(os.path.join(opt.save_dir, train_loader._data.subject_id+'.npy'), 'wb') as f:

@@ -2,3 +2,4 @@ __pycache__
 data
 pretrain_model
 *.log
+script/models--stabilityai--stable-diffusion-xl-base-1.0

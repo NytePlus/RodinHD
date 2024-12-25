@@ -281,7 +281,9 @@ class NeRFDataset:
             # self.poses = gen_path_spiral(pos_gen, at=(0.,0.4,0.), up=up,frames=60)
             # self.poses = self.collect_gt_poses()
 
-            if self.opt.dataset == 'facescape':
+            if self.opt.dataset == 'portrait3d':
+                self.poses = [nerf_matrix_scale_translate(pose, scale=self.scale, offset=self.offset) for pose in self.poses]
+            elif self.opt.dataset == 'facescape':
                 self.poses = [nerf_matrix_scale_translate(pose, scale=self.scale, offset=self.offset) for pose in self.poses]
 
             visualize_poses(self.poses, os.path.join(self.save_dir, 'poses.glb'))
@@ -310,7 +312,7 @@ class NeRFDataset:
             if num_train_frames is None:
                 num_train_frames = round(len(os.listdir(self.root_path)) / 2)
             frames = list(range(0,  num_train_frames)) if (self.training or self.type == 'test_all') else list(range(0,  5))
-  
+
             def load_data(i):  
                 camera_path = os.path.join(self.root_path,   'metadata_{:06d}.json'.format(i))  
                 with open(camera_path, 'r') as f:  
@@ -348,8 +350,8 @@ class NeRFDataset:
                 results = list(executor.map(load_data, frames))  
             
             self.poses, self.images = zip(*results)
-
-        visualize_poses(self.poses, os.path.join(self.save_dir, 'gt_poses.glb'))
+            if self.type == 'train':
+                visualize_poses(self.poses, os.path.join(self.save_dir, f'gt_poses.glb'))
         self.poses = torch.from_numpy(np.stack(self.poses, axis=0)) # [N, 4, 4]
         if self.images is not None:
             self.images = torch.from_numpy(np.stack(self.images, axis=0)) # [N, H, W, C]
@@ -393,9 +395,9 @@ class NeRFDataset:
             with open(camera_path, 'r') as f:
                 camera_ = json.load(f)['cameras'][0]
             pose = np.array(camera_['transformation'], dtype=np.float32)  # assume [4, 4]
-            if self.opt.dataset == 'facescape':
+            if self.opt.dataset == 'portrait3d':
                 pose = nerf_matrix_to_ngp(pose, scale=self.scale, offset=self.offset)
-            elif self.opt.dataset == 'portrait3d':
+            elif self.opt.dataset == 'facescape':
                 pose = nerf_matrix_scale_translate(pose, scale=self.scale, offset=self.offset)
 
             poses.append(pose)
