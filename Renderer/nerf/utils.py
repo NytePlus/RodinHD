@@ -647,11 +647,13 @@ class Trainer(object):
             #     self.save_checkpoint(full=True, best=False)
 
             if self.epoch % self.eval_interval == 0:
-                self.evaluate_one_epoch(triplane, valid_loader)
+                self.evaluate_one_epoch(triplane, valid_loader, all=True)
                 if self.local_rank == 0:
                     self.save_checkpoint(full=False, best=False)
+                else:
+                    self.save_checkpoint(full=False, best=False, name=f"{self.local_rank}_{self.epoch}")
 
-        self.evaluate_one_epoch(triplane, valid_loader)
+        self.evaluate_one_epoch(triplane, valid_loader, all=True)
         if self.local_rank == 0:
             self.save_checkpoint(full=False, best=False)
 
@@ -701,9 +703,14 @@ class Trainer(object):
         with torch.no_grad():
 
             for i, data in enumerate(loader):
-                
+                min_t, max_t = 1000, 0
                 with torch.cuda.amp.autocast(enabled=self.fp16):
+                    import time
+                    begin = time.time()
                     preds, preds_depth = self.test_step(triplane, data)
+                    end = time.time()
+                    min_t = min(min_t, end - begin)
+                    max_t = max(max_t, end - begin)
 
                 if self.opt.color_space == 'linear':
                     preds = linear_to_srgb(preds)
@@ -722,7 +729,8 @@ class Trainer(object):
                 cv2.imwrite(os.path.join(save_path, f'{name}_{i:04d}_depth.png'), pred_depth)
 
                 pbar.update(loader.batch_size)
-        
+
+        print(f'inference time: max {max_t} s, min {min_t} s.')
         if write_video:
             all_preds = np.stack(all_preds, axis=0)
             all_preds_depth = np.stack(all_preds_depth, axis=0)
@@ -1013,8 +1021,8 @@ class Trainer(object):
 
         return psnr
 
-    def evaluate_one_epoch(self, triplane, loader, name=None):
-        if self.local_rank == 0:
+    def evaluate_one_epoch(self, triplane, loader, all=False, name=None):
+        if all or self.local_rank == 0:
             self.log(f"++> Evaluate {loader._data.subject_id} at epoch {self.epoch} ...")
 
             if name is None:
@@ -1084,8 +1092,11 @@ class Trainer(object):
                 self.stats["results"].append(average_loss) # if no metric, choose best by min loss
 
             for metric in self.metrics:
-                self.log(metric.report() + f" {loader._data.subject_id}", style="blue")
-                if self.use_tensorboardX:
+                if all:
+                    print(metric.report() + f" {loader._data.subject_id}")
+                else:
+                    self.log(metric.report() + f" {loader._data.subject_id}", style="blue")
+                if self.use_tensorboardX and self.local_rank == 0:
                     metric.write(self.writer, self.epoch, prefix="evaluate")
                 metric.clear()
 

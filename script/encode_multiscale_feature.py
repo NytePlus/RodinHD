@@ -77,17 +77,18 @@ def separate_features(input_list):
 
 dist_util.setup_dist()
 
-model = VAEKL.from_pretrained(
-    "stabilityai/stable-diffusion-xl-base-1.0", subfolder="vae", 
-).to(dist_util.dev())
-
 parser = argparse.ArgumentParser()
 parser.add_argument("--root", type=str)
 parser.add_argument("--txt_file", type=str)
 parser.add_argument("--start_idx", type=int)
 parser.add_argument("--end_idx", type=int)
 parser.add_argument("--output_dir", type=str)
+parser.add_argument("--vae_dir", type=str, default="stabilityai/stable-diffusion-xl-base-1.0")
 args = parser.parse_args()
+
+model = VAEKL.from_pretrained(
+    args.vae_dir, subfolder="vae",
+).to(dist_util.dev())
 
 batch_size = 4
 dataset = ImageDataset(args.root, txt_file=args.txt_file, start_idx=args.start_idx, end_idx=args.end_idx)  
