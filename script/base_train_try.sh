@@ -1,7 +1,6 @@
 NUM_GPUS=8
 output_path=/home/wcc/RodinHD/data/save_diffusion
-# txt_file=/home/wcc/RodinHD/data/portrait3d_data/fitting_obj_list.txt
-txt_file=/home/wcc/RodinHD/script/txt_file.txt
+txt_file=/home/wcc/RodinHD/data/portrait3d_data/fitting_obj_list.txt
 triplane_path=/home/wcc/RodinHD/data/save_triplane_and_mlp
 latent_root=/home/wcc/RodinHD/data/latent_root
 ms_feature_root=/home/wcc/RodinHD/data/ms_feature_root

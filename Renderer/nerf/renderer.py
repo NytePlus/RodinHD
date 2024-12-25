@@ -92,8 +92,11 @@ class NeRFRenderer(nn.Module):
             # density grid
             density_grid = torch.zeros([self.cascade, self.grid_size ** 3]) # [CAS, H * H * H]
             density_bitfield = torch.zeros(self.cascade * self.grid_size ** 3 // 8, dtype=torch.uint8) # [CAS * H * H * H // 8]
-            self.register_buffer('density_grid', density_grid)
-            self.register_buffer('density_bitfield', density_bitfield)
+            # We cannot use register_buffer because it automatically broadcast. by Nyte
+            self.density_grid = density_grid
+            self.density_bitfield = density_bitfield
+            # self.register_buffer('density_grid', density_grid)
+            # self.register_buffer('density_bitfield', density_bitfield)
             self.mean_density = 0
             self.iter_density = 0
             # step counter
@@ -101,6 +104,11 @@ class NeRFRenderer(nn.Module):
             self.register_buffer('step_counter', step_counter)
             self.mean_count = 0
             self.local_step = 0
+
+    def to(self, device):
+        super().to(device)
+        self.density_grid = self.density_grid.to(device)
+        self.density_bitfield = self.density_bitfield.to(device)
 
     def forward(self, x, d):
         raise NotImplementedError()
