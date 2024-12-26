@@ -88,6 +88,80 @@ class _grid_encode(Function):
 
 grid_encode = _grid_encode.apply
 
+# batch grid encode by Nyte.
+class _grid_encode_batch(Function):
+    @staticmethod
+    @custom_fwd
+    def forward(ctx, inputs, embeddings, offsets, per_level_scale, base_resolution, calc_grad_inputs=False, gridtype=0,
+                align_corners=False, interpolation=0):
+        # inputs: [B, D], float in [0, 1]
+        # embeddings: [sO = 512 * 512 * 3, C], float
+        # offsets: [L + 1], int
+        # RETURN: [B, F], float
+
+        ctx.embedding_list = embeddings
+        inputs = inputs.contiguous()
+        embeddings = torch.cat(embeddings).contiguous()
+
+        B, D = inputs.shape  # batch size, coord dim
+        L = 3  # level
+        N, C, _, _ = embeddings.shape  # embedding dim for each level
+        S = np.log2(per_level_scale)  # resolution multiplier at each level, apply log2 for later CUDA exp2f
+        H = base_resolution  # base resolution
+
+        # manually handle autocast (only use half precision embeddings, inputs must be float for enough precision)
+        # if C % 2 != 0, force float, since half for atomicAdd is very slow.
+        if torch.is_autocast_enabled() and C % 2 == 0:
+            inputs = inputs.to(torch.float32)
+            embeddings = embeddings.to(torch.half)
+
+        # L first, optimize cache for cuda kernel, but needs an extra permute later
+        outputs = torch.empty(B, C, device=inputs.device, dtype=embeddings.dtype)
+
+        if calc_grad_inputs:
+            dy_dx = torch.empty(B, D * C, device=inputs.device, dtype=embeddings.dtype)
+        else:
+            dy_dx = None
+        _backend.grid_encode_forward_batch(inputs, embeddings, offsets, outputs, B, D, N, C, L, S, H, B // 3, dy_dx, gridtype,
+                                     align_corners, interpolation)
+
+        ctx.save_for_backward(inputs, embeddings, offsets, dy_dx)
+        ctx.dims = [B, D, N, C, L, S, H, gridtype, interpolation]
+        ctx.align_corners = align_corners
+
+        return outputs
+
+    @staticmethod
+    # @once_differentiable
+    @custom_bwd
+    def backward(ctx, grad):
+
+        inputs, embeddings, offsets, dy_dx = ctx.saved_tensors
+        B, D, N, C, L, S, H, gridtype, interpolation = ctx.dims
+        align_corners = ctx.align_corners
+
+        # grad: [B, L * C] --> [L, B, C]
+        grad = grad.view(B, C).contiguous()
+
+        grad_embeddings = torch.zeros_like(embeddings)
+
+        if dy_dx is not None:
+            grad_inputs = torch.zeros_like(inputs, dtype=embeddings.dtype)
+        else:
+            grad_inputs = None
+
+        _backend.grid_encode_backward_batch(grad, inputs, embeddings, offsets, grad_embeddings, B, D, N, C, L, S, H, B // 3,
+                                      dy_dx, grad_inputs, gridtype, align_corners, interpolation)
+
+        if dy_dx is not None:
+            grad_inputs = grad_inputs.to(inputs.dtype)
+        for i, embedding in enumerate(ctx.embedding_list):
+            embedding.grad = grad_embeddings[i]
+
+        return grad_inputs, grad_embeddings, None, None, None, None, None, None, None
+
+
+grid_encode_batch = _grid_encode_batch.apply
 
 class GridEncoder(nn.Module):
     def __init__(self, input_dim=3, num_levels=16, level_dim=2, per_level_scale=2, base_resolution=16, log2_hashmap_size=19, desired_resolution=None, gridtype='hash', align_corners=False, interpolation='linear', random_scale=False, random_noise=False):
@@ -138,7 +212,7 @@ class GridEncoder(nn.Module):
     def __repr__(self):
         return f"GridEncoder: input_dim={self.input_dim} num_levels={self.num_levels} level_dim={self.level_dim} resolution={self.base_resolution} -> {int(round(self.base_resolution * self.per_level_scale ** (self.num_levels - 1)))} per_level_scale={self.per_level_scale:.4f} gridtype={self.gridtype} align_corners={self.align_corners} interpolation={self.interpolation}"
     
-    def forward(self, triplane_, inputs, bound=1):
+    def forward(self, triplane_, inputs, bound=1, rays=None):
         # inputs: [..., input_dim], normalized real world positions in [-bound, bound]
         # return: [..., num_levels * level_dim]
 
@@ -146,11 +220,17 @@ class GridEncoder(nn.Module):
 
         prefix_shape = list(inputs.shape[:-1])
         inputs = inputs.view(-1, self.input_dim)
-        
-        triplane = triplane_.squeeze().permute(0, 2, 3, 1).reshape(-1, self.level_dim).contiguous()
-        outputs = grid_encode(inputs, triplane, self.offsets, self.per_level_scale, self.base_resolution, inputs.requires_grad, self.gridtype_id, self.align_corners, self.interp_id)
 
-        outputs = outputs.view(prefix_shape + [self.output_dim])
+        # batch grid encode by Nyte.
+        if rays is None:
+            triplane = triplane_.squeeze().permute(0, 2, 3, 1).reshape(-1, self.level_dim).contiguous()
+            outputs = grid_encode(inputs, triplane, self.offsets, self.per_level_scale, self.base_resolution, inputs.requires_grad, self.gridtype_id, self.align_corners, self.interp_id)
+
+            outputs = outputs.view(prefix_shape + [self.output_dim])
+        else:
+            triplane = [t.squeeze().permute(0, 2, 3, 1).reshape(-1, self.level_dim).contiguous() for t in triplane_]
+            outputs = grid_encode_batch(inputs, triplane, self.offsets, self.per_level_scale, self.base_resolution, inputs.requires_grad, self.gridtype_id, self.align_corners, self.interp_id)
+
 
         return outputs
 

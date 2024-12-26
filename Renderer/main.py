@@ -1,11 +1,15 @@
 import sys
 import gc
+import os
 import time
 import torch
 import argparse
 import random
 import concurrent
 
+sys.path.append('../Wrapper')
+
+from metrics import ArcfaceLoss
 from nerf.provider import NeRFDataset, RayTriplaneRefDataset
 from TriplaneFit.network import NeRFNetwork, NeRFNetworkPlus
 from TriplaneFit.utils import *
@@ -26,6 +30,7 @@ if __name__ == '__main__':
     parser.add_argument('--workspace', type=str, default='workspace')
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--dataset', type=str, default='portrait3d')
+    parser.add_argument('-finetune', action='store_true', help="mark density grid to full")
     ### training options
     parser.add_argument('--iters', type=int, default=9000, help="training iters")
     parser.add_argument('--lr0', type=float, default=2e-2, help="initial learning rate for embeddings")
@@ -105,6 +110,7 @@ if __name__ == '__main__':
 
     dist_util.setup_dist()
     print('setup done.')
+    device = dist_util.dev()
 
     if opt.ray_shuffle:
         NeRFNetwork_ = NeRFNetworkPlus
@@ -124,11 +130,9 @@ if __name__ == '__main__':
         color_rank=[int(opt.triplane_channels // 4 * 3)] * 3,
         triplane_channels=opt.triplane_channels,
     )
-    
     print(model)
 
-    criterion = torch.nn.MSELoss(reduction='none')
-    device = dist_util.dev()
+    criterion = torch.nn.MSELoss(reduction='mean')
 
     if opt.test:
         shard=MPI.COMM_WORLD.Get_rank()
@@ -259,9 +263,10 @@ if __name__ == '__main__':
                     print(subject_id)
 
                     triplane_path = os.path.join(opt.save_dir, subject_id.split('/')[-1]+'.npy')
-                    # if os.path.exists(triplane_path) and opt.out_loop_eps == 1:
-                    #     print('skip')
-                    #     continue
+
+                    if os.path.exists(triplane_path) and not opt.finetune and opt.out_loop_eps == 1:
+                        print('skip')
+                        continue
 
                     train_loader, triplane, iwc_state = NeRFDataset(opt,  root_path=os.path.join(opt.data_root, subject_id), save_dir=opt.save_dir, device=device, type='train', triplane_resolution=opt.resolution0, triplane_channels=opt.triplane_channels, downscale=opt.downscale, num_train_frames=None).dataloader()
                     triplane = triplane.reshape(3, 1, opt.triplane_channels, opt.resolution0, opt.resolution0)

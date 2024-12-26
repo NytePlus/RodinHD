@@ -433,9 +433,10 @@ class Trainer(object):
                 print(*args, file=self.log_ptr)
                 self.log_ptr.flush() # write immediately to file
 
-    ### ------------------------------
+    ### ------------------------------	
 
     def train_step(self, triplane, data):
+
         rays_o = data['rays_o'] # [B, N, 3]
         rays_d = data['rays_d'] # [B, N, 3]
 
@@ -636,11 +637,13 @@ class Trainer(object):
 
         # get a ref to error_map
         self.error_map = train_loader._data.error_map
+        if self.opt.finetune:
+            self.model.density_bitfield.fill_(-1)
+            self.evaluate_one_epoch(triplane, valid_loader)
 
         for epoch in range(self.epoch + 1, max_epochs + 1):
             self.epoch = epoch
             # self.evaluate_one_epoch(triplane, valid_loader)
-
             self.train_one_epoch(triplane, train_loader, iwc_state)
 
             # if self.workspace is not None and self.local_rank == 0:

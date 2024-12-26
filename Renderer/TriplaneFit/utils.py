@@ -292,6 +292,7 @@ class Trainer(_Trainer):
             # I need to pause training and restart, so I add the following line. I should remove 'decoder_outloop_*ep.pth' manually.
             # Comment by Nyte.
             inner_checkpoint_list = sorted(glob.glob(f'{self.ckpt_path}/{self.name}_ep*.pth'))
+
             # outer_checkpoint_list = sorted(glob.glob(f'{self.ckpt_path}/decoder_outloop_*ep.pth'))
             # if outer_checkpoint_list:
             #     checkpoint = outer_checkpoint_list[-1]
@@ -534,8 +535,11 @@ class TrainerPlus(Trainer):
             gt_rgbs = rgbs
 
         # change mean_count by Nyte.
+        import time
+        start = time.time()
         outputs = self.model(triplanes, rays_o, rays_d, staged=False, bg_color=bg_color, perturb=True,
                               force_all_rays=False if self.opt.patch_size == 1 else True, **vars(self.opt))
+        # print(f'total time: {time.time() - start}')
         pred_rgbs = outputs['image']
         rays_len_min = outputs['rays[:, 2].min']
         rays_len_max = outputs['rays[:, 2].max']

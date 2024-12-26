@@ -408,6 +408,7 @@ __global__ void kernel_march_rays_train(
 
     // make point_index increase with n by Nyte. Allocate fixed position for thread data.
     uint32_t point_index = n * max_steps;
+
     atomicAdd(counter, num_steps);
     uint32_t ray_index = n;
     
@@ -772,8 +773,8 @@ __global__ void kernel_march_rays(
         const int nz = clamp(0.5 * (z * mip_rbound + 1) * H, 0.0f, (float)(H - 1));
 
         const uint32_t index = level * H3 + __morton3D(nx, ny, nz);
-        const bool occ = grid[index / 8] & (1 << (index % 8));//Nyte. I cannot find bug.
-        //printf("%d\n", occ ? 1 : 2);
+
+        const bool occ = grid[index / 8] & (1 << (index % 8));//Nyte. This fail because of register_buffer assign wrong in TriplaneFit/network/NeRFNetworkPlus.forward
 
         // if occpuied, advance a small step, and write to output
         if (occ) {
