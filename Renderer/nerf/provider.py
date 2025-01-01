@@ -483,7 +483,8 @@ class NeRFDataset:
         rays_o, rays_d, inds = rays['rays_o'].reshape(-1, 3), rays['rays_d'].reshape(-1, 3), rays['inds'].reshape(-1)
 
         if self.images is not None:
-            image = self.images[index].to('cpu')  # [1, H, W, 3/4]
+            # NYTE: What is preload?
+            image = self.images[index] #.to('cpu')  # [1, H, W, 3/4]
             if self.training:
                 C = image.shape[-1]
                 image = image.reshape(-1, C)    # [H * W, 3/4]

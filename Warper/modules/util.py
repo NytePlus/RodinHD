@@ -49,13 +49,19 @@ def make_coordinate_grid(spatial_size, ref, **kwargs):
     y = (2 * (y / (h - 1)) - 1)  # the y axis faces to the bottom
     z = (2 * (z / (d - 1)) - 1)  # the z axis faces to the inner
 
-    yy = y.view(1, -1, 1).repeat(d, 1, w)
-    xx = x.view(1, 1, -1).repeat(d, h, 1)
-    zz = z.view(-1, 1, 1).repeat(1, h, w)
+    xy_x = x.view(1, -1).repeat(h, 1)
+    xy_y = y.view(-1, 1).repeat(1, w)
+    xy_meshed = torch.cat([xy_x.unsqueeze_(2), xy_y.unsqueeze_(2)], 2)
 
-    meshed = torch.cat([xx.unsqueeze_(3), yy.unsqueeze_(3), zz.unsqueeze_(3)], 3)
+    yz_y = y.view(1, -1).repeat(d, 1)
+    yz_z = z.view(-1, 1).repeat(1, h)
+    yz_meshed = torch.cat([yz_y.unsqueeze_(2), yz_z.unsqueeze_(2)], 2)
 
-    return meshed
+    xz_x = x.view(1, -1).repeat(d, 1)
+    xz_z = z.view(-1, 1).repeat(1, w)
+    xz_meshed = torch.cat([xz_x.unsqueeze_(2), xz_z.unsqueeze_(2)], 2)
+
+    return xy_meshed, yz_meshed, xz_meshed
 
 
 class ConvT2d(nn.Module):
@@ -114,6 +120,25 @@ class UpBlock3d(nn.Module):
 
     def forward(self, x):
         out = F.interpolate(x, scale_factor=(1, 2, 2))
+        out = self.conv(out)
+        out = self.norm(out)
+        out = F.relu(out)
+        return out
+
+class UpBlock2d(nn.Module):
+    """
+    Upsampling block for use in decoder.
+    """
+
+    def __init__(self, in_features, out_features, kernel_size=3, padding=1, groups=1):
+        super(UpBlock2d, self).__init__()
+
+        self.conv = nn.Conv2d(in_channels=in_features, out_channels=out_features, kernel_size=kernel_size,
+                              padding=padding, groups=groups)
+        self.norm = nn.BatchNorm2d(out_features, affine=True)
+
+    def forward(self, x):
+        out = F.interpolate(x, scale_factor=(2, 2))
         out = self.conv(out)
         out = self.norm(out)
         out = F.relu(out)
@@ -194,7 +219,7 @@ class Encoder(nn.Module):
 
         down_blocks = []
         for i in range(num_blocks):
-            down_blocks.append(DownBlock3d(in_features if i == 0 else min(max_features, block_expansion * (2 ** i)), min(max_features, block_expansion * (2 ** (i + 1))), kernel_size=3, padding=1))
+            down_blocks.append(DownBlock2d(in_features if i == 0 else min(max_features, block_expansion * (2 ** i)), min(max_features, block_expansion * (2 ** (i + 1))), kernel_size=3, padding=1))
         self.down_blocks = nn.ModuleList(down_blocks)
 
     def forward(self, x):
@@ -217,13 +242,13 @@ class Decoder(nn.Module):
         for i in range(num_blocks)[::-1]:
             in_filters = (1 if i == num_blocks - 1 else 2) * min(max_features, block_expansion * (2 ** (i + 1)))
             out_filters = min(max_features, block_expansion * (2 ** i))
-            up_blocks.append(UpBlock3d(in_filters, out_filters, kernel_size=3, padding=1))
+            up_blocks.append(UpBlock2d(in_filters, out_filters, kernel_size=3, padding=1))
 
         self.up_blocks = nn.ModuleList(up_blocks)
         self.out_filters = block_expansion + in_features
 
-        self.conv = nn.Conv3d(in_channels=self.out_filters, out_channels=self.out_filters, kernel_size=3, padding=1)
-        self.norm = nn.BatchNorm3d(self.out_filters, affine=True)
+        self.conv = nn.Conv2d(in_channels=self.out_filters, out_channels=self.out_filters, kernel_size=3, padding=1)
+        self.norm = nn.BatchNorm2d(self.out_filters, affine=True)
 
     def forward(self, x):
         out = x.pop()
@@ -235,6 +260,7 @@ class Decoder(nn.Module):
         out = self.norm(out)
         out = F.relu(out)
         return out
+
 
 
 class Hourglass(nn.Module):

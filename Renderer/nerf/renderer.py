@@ -107,8 +107,10 @@ class NeRFRenderer(nn.Module):
 
     def to(self, device):
         super().to(device)
-        self.density_grid = self.density_grid.to(device)
-        self.density_bitfield = self.density_bitfield.to(device)
+        if self.cuda_ray:
+            self.density_grid = self.density_grid.to(device)
+            self.density_bitfield = self.density_bitfield.to(device)
+        self.inv_planes = self.inv_planes.to(device)
 
     def forward(self, x, d):
         raise NotImplementedError()
@@ -546,6 +548,7 @@ class NeRFRenderer(nn.Module):
         self.mean_density = torch.mean(self.density_grid.clamp(min=0)).item() # -1 regions are viewed as 0 density.
         #self.mean_density = torch.mean(self.density_grid[self.density_grid > 0]).item() # do not count -1 regions
         self.iter_density += 1
+        del tmp_grid
 
         # convert to bitfield
         density_thresh = min(self.mean_density, self.density_thresh)

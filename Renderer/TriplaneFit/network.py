@@ -101,7 +101,7 @@ class NeRFNetwork(NeRFRenderer):
         else:
             self.bg_net = None
         
-        self.plane_axes = self.generate_planes().cuda()
+        self.plane_axes = self.generate_planes()
         self.inv_planes = torch.linalg.inv(self.plane_axes)
     
     def generate_planes(self):
