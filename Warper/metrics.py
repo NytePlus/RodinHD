@@ -55,6 +55,7 @@ class ArcfaceLoss(nn.Module):
             output = output.permute(0, 2, 1).reshape(-1, 3, 128, 128)
             target = target.permute(0, 2, 1).reshape(-1, 3, 128, 128)
         else:
+
             output = output.permute(0, 3, 1, 2)
             target = target.permute(0, 3, 1, 2)
         output = (output + 1.) / 2.
@@ -67,4 +68,3 @@ class ArcfaceLoss(nn.Module):
         emb_target = self.id_model(target)
         loss = torch.einsum('ij,ij->i', emb_output, emb_target)
         return loss
-

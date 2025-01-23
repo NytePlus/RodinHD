@@ -8,7 +8,7 @@ from torch import nn
 import torch
 
 from .convnextv2 import convnextv2_tiny
-from Warpper.modules.util import filter_state_dict
+from Warper.modules.util import filter_state_dict
 
 model_dict = {
     'convnextv2_tiny': convnextv2_tiny,
@@ -23,9 +23,9 @@ class MotionExtractor(nn.Module):
         backbone = kwargs.get('backbone', 'convnextv2_tiny')
         self.detector = model_dict.get(backbone)(**kwargs)
 
-    def load_pretrained(self, init_path: str):
+    def load_pretrained(self, init_path: str, device):
         if init_path not in (None, ''):
-            state_dict = torch.load(init_path, map_location=lambda storage, loc: storage)
+            state_dict = torch.load(init_path, map_location=device)
             state_dict = filter_state_dict(state_dict, remove_name='head')
             ret = self.detector.load_state_dict(state_dict, strict=False)
             print(f'Load pretrained model from {init_path}, ret: {ret}')

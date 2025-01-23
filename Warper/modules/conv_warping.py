@@ -5,8 +5,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.checkpoint as torchck
 
-from .nn import avg_pool_nd, conv_nd, linear, normalization, timestep_embedding, zero_module, Conv3DAware
-from .fp16_util import convert_module_to_f16, convert_module_to_f32
+from Warper.modules.nn import avg_pool_nd, conv_nd, normalization, timestep_embedding, zero_module, Conv3DAware
+from Warper.modules.fp16_util import convert_module_to_f16, convert_module_to_f32
 
 _FORCE_MEM_EFFICIENT_ATTN = 0
 print('FORCE_MEM_EFFICIENT_ATTN=', _FORCE_MEM_EFFICIENT_ATTN, '@UNET:QKVATTENTION')
