@@ -197,6 +197,26 @@ def extract_geometry(bound_min, bound_max, resolution, threshold, query_func):
     vertices = vertices / (resolution - 1.0) * (b_max_np - b_min_np)[None, :] + b_min_np[None, :]
     return vertices, triangles
 
+class LpipsLoss(nn.Module):
+    def __init__(self, device='cpu'):
+        super().__init__()
+        self.lpips = lpips.LPIPS(net='alex').train().to(device)
+
+    def to(self, device):
+        super().to(device)
+        self.lpips.to(device)
+
+    def forward(self, output, target):
+        if len(output.shape) == 3:
+            w = round(output.shape[1] ** 0.5)
+            output = output.permute(0, 2, 1).reshape(-1, 3, w, w)
+            target = target.permute(0, 2, 1).reshape(-1, 3, w, w)
+        else:
+            output = output.permute(0, 3, 1, 2)
+            target = target.permute(0, 3, 1, 2)
+
+        loss = self.lpips(output, target)
+        return loss
 
 class PSNRMeter:
     def __init__(self):
@@ -637,7 +657,7 @@ class Trainer(object):
 
         # get a ref to error_map
         self.error_map = train_loader._data.error_map
-        if self.opt.finetune:
+        if self.opt.finetune and self.model.density_bitfield is not None:
             self.model.density_bitfield.fill_(-1)
             self.evaluate_one_epoch(triplane, valid_loader)
 

@@ -1,10 +1,10 @@
 low_res_triplane_dir=/path/to/low_res_triplane_dir
-output_path=/path/to/save_dir
+output_path=/home/wcc/RodinHD/data/save_updiffusion
 sr_diffusion_ckpt=/path/to/sr_diffusion_ckpt
-render_ckpt=/path/to/render_ckpt
-txt_file=/path/to/test_file_list.txt
-render_cam_path=/path/to/render_cam_path
-latent_root=/path/to/latent_root
+render_ckpt=/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth
+txt_file=/home/wcc/RodinHD/data/save_triplane_and_mlp2/fitting_obj_list.txt
+render_cam_path=/home/wcc/RodinHD/data/portrait3d_data
+latent_root=/home/wcc/RodinHD/data/feature/latent
 num_samples=10
 
 MODEL_FLAGS="--learn_sigma False --model_path $sr_diffusion_ckpt --n_feats 64 --ch_mult 1 2 4"

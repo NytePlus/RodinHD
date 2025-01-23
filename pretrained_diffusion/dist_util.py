@@ -17,7 +17,6 @@ GPUS_PER_NODE = th.cuda.device_count()
 
 SETUP_RETRY_COUNT = 3
 
-
 def setup_dist():
     """
     Setup a distributed process group.
@@ -25,6 +24,27 @@ def setup_dist():
     if dist.is_initialized():
         return
 
+    comm = MPI.COMM_WORLD
+    backend = "gloo" if not th.cuda.is_available() else "nccl"
+    if backend == "gloo":
+        hostname = "localhost"
+    else:
+        hostname = socket.gethostbyname(socket.getfqdn())
+    if not os.environ.get("MASTER_ADDR"):
+        os.environ["MASTER_ADDR"] = comm.bcast(hostname, root=0)
+    os.environ["RANK"] = str(comm.rank)
+    os.environ["WORLD_SIZE"] = str(comm.size)
+    os.environ["LOCAL_RANK"] = str(comm.rank)
+    port = comm.bcast(_find_free_port(), root=0)
+    if not os.environ.get("MASTER_PORT"):
+        os.environ["MASTER_PORT"] = str(port)
+
+    dist.init_process_group(
+        backend=backend,
+        init_method=f"tcp://{hostname}:{port}",
+        rank=comm.rank,
+        world_size=comm.size
+    )
     deepspeed.init_distributed()
     th.cuda.set_device(dev())
 

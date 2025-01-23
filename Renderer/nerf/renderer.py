@@ -85,6 +85,8 @@ class NeRFRenderer(nn.Module):
         aabb_infer = aabb_train.clone()
         self.register_buffer('aabb_train', aabb_train)
         self.register_buffer('aabb_infer', aabb_infer)
+        self.density_grid = None
+        self.density_bitfield = None
 
         # extra state for cuda raymarching
         self.cuda_ray = cuda_ray
@@ -107,8 +109,9 @@ class NeRFRenderer(nn.Module):
 
     def to(self, device):
         super().to(device)
-        self.density_grid = self.density_grid.to(device)
-        self.density_bitfield = self.density_bitfield.to(device)
+        if self.density_grid is not None:
+            self.density_grid = self.density_grid.to(device)
+            self.density_bitfield = self.density_bitfield.to(device)
 
     def forward(self, x, d):
         raise NotImplementedError()
@@ -579,7 +582,7 @@ class NeRFRenderer(nn.Module):
                 head = 0
                 while head < N:
                     tail = min(head + max_ray_batch, N)
-                    results_ = _run(rays_o[b:b+1, head:tail], rays_d[b:b+1, head:tail], **kwargs)
+                    results_ = _run(triplane, rays_o[b:b+1, head:tail], rays_d[b:b+1, head:tail], **kwargs)
                     depth[b:b+1, head:tail] = results_['depth']
                     image[b:b+1, head:tail] = results_['image']
                     head += max_ray_batch

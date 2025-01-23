@@ -3,5 +3,6 @@ data
 pretrain_model
 人脸第一批数据
 *.log
-script/models--stabilityai--stable-diffusion-xl-base-1.0
-Wrapper/weights
+script/vae_model
+Warpper/weights
+data_util

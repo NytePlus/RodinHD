@@ -2,6 +2,7 @@
 Train a diffusion model on images.
 """
 import argparse
+import multiprocessing
 import numpy as np
 from pretrained_diffusion import dist_util, logger
 from pretrained_diffusion.dataset.base_dataset_test import load_data
@@ -25,6 +26,7 @@ def main():
     args, _ = create_argparser()
     args = args.parse_args()
     dist_util.setup_dist()
+    multiprocessing.set_start_method("spawn")
 
     options = args_to_dict(args, model_and_diffusion_defaults(args.super_res).keys())
     model, diffusion = create_model_and_diffusion(**options)

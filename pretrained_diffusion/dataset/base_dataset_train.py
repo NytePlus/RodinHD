@@ -72,11 +72,11 @@ def load_data(
     )
     if deterministic:
         loader = DataLoader(
-            dataset, batch_size=batch_size, shuffle=False, num_workers=4, drop_last=True, pin_memory=True
+            dataset, batch_size=batch_size, shuffle=False, num_workers=4, drop_last=True, pin_memory=False
         )
     else:
         loader = DataLoader(
-            dataset, batch_size=batch_size, shuffle=True, num_workers=4, drop_last=True, pin_memory=True
+            dataset, batch_size=batch_size, shuffle=True, num_workers=4, drop_last=True, pin_memory=False
         )
     while True:
         yield from loader
@@ -127,9 +127,9 @@ class ImageDataset(Dataset):
             triplane = np.load(f).astype(np.float32)
  
         #? modified
-        from scipy.ndimage import zoom  
-        zoom_factors = (1, 1, 1, 128/512, 128/512)
-        triplane = zoom(triplane, zoom_factors, order=3)  # order=3 表示双三次插值
+        # from scipy.ndimage import zoom  
+        # zoom_factors = (1, 1, 1, 128/512, 128/512)
+        # triplane = zoom(triplane, zoom_factors, order=3)  # order=3 表示双三次插值
         #? modified
         triplane = th.as_tensor(triplane)
 

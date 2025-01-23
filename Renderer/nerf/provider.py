@@ -40,6 +40,15 @@ def nerf_matrix_scale_translate(pose, scale=0.4, offset=[0, 0, 0]):
     ], dtype=np.float32)
     return new_pose
 
+def nerf_matrix_to_metahuman(pose, scale=1.0, offset=[0, 0, 0]):
+    new_pose = np.array([
+        [pose[0, 0], pose[0, 1], pose[0, 2], pose[0, 3] * scale + offset[2]],
+        [pose[1, 0], pose[1, 1], pose[1, 2], pose[1, 3] * scale + offset[0]],
+        [pose[2, 0], pose[2, 1], pose[2, 2], pose[2, 3] * scale + offset[1]],
+        [0, 0, 0, 1],
+    ], dtype=np.float32)
+    return new_pose
+
 def spiral(radius=1):
     return lambda theta, phi : [
                                 radius*np.sin(np.arccos(1 - 2*(np.clip(phi, 1e-5, math.pi - 1e-5)/ math.pi))) * np.sin(math.pi-theta), # 1 
@@ -324,6 +333,8 @@ class NeRFDataset:
                     pose = nerf_matrix_to_ngp(pose, scale=self.scale, offset=self.offset)
                 elif self.opt.dataset == 'portrait3d':
                     pose = nerf_matrix_scale_translate(pose, scale=self.scale, offset=self.offset)
+                elif self.opt.dataset == 'metahuman':
+                    pose = nerf_matrix_to_metahuman(pose, scale=self.scale, offset=self.offset)
             
                 image_path = os.path.join(self.root_path,  'img_proc_fg_{:06d}.png'.format(i))  
                 image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED) # [H, W, 3] o [H, W, 4]
@@ -399,6 +410,8 @@ class NeRFDataset:
                 pose = nerf_matrix_to_ngp(pose, scale=self.scale, offset=self.offset)
             elif self.opt.dataset == 'facescape':
                 pose = nerf_matrix_scale_translate(pose, scale=self.scale, offset=self.offset)
+            elif self.opt.dataset == 'metahuman':
+                pose = nerf_matrix_to_metahuman(pose, scale=self.scale, offset=self.offset)
 
             poses.append(pose)
         return poses

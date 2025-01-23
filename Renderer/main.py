@@ -7,9 +7,10 @@ import argparse
 import random
 import concurrent
 
-sys.path.append('../Wrapper')
+from nerf.utils import LpipsLoss
 
-from metrics import ArcfaceLoss
+sys.path.append('../Warpper')
+
 from nerf.provider import NeRFDataset, RayTriplaneRefDataset
 from TriplaneFit.network import NeRFNetwork, NeRFNetworkPlus
 from TriplaneFit.utils import *
@@ -98,7 +99,7 @@ if __name__ == '__main__':
     if opt.O:
         opt.fp16 = True
         opt.cuda_ray = True
-        opt.preload = True    
+        # opt.preload = True
 
     if opt.patch_size > 1:
         opt.error_map = False # do not use error_map if use patch-based training
@@ -132,7 +133,10 @@ if __name__ == '__main__':
     )
     print(model)
 
-    criterion = torch.nn.MSELoss(reduction='mean')
+    if opt.num_rays == -1:
+        criterion = LpipsLoss(device)
+    else:
+        criterion = torch.nn.MSELoss(reduction='mean')
 
     if opt.test:
         shard=MPI.COMM_WORLD.Get_rank()
@@ -256,7 +260,7 @@ if __name__ == '__main__':
             # I made a mistake again. I save triplane[i] here instead of triplanes[i]. I lose my training checkpoint. Comment by Nyte.
 
         else:
-            scheduler_mlp =  optim.lr_scheduler.LambdaLR(optimizer_mlp, lambda iter: 0.1 ** min(iter / (50*opt.iters), 1))
+            scheduler_mlp = optim.lr_scheduler.LambdaLR(optimizer_mlp, lambda iter: 0.1 ** min(iter / (50*opt.iters), 1))
 
             for epoch in range(opt.out_loop_eps):
                 for subject_id in all_ids:
