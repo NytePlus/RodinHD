@@ -1,6 +1,6 @@
-root_path=/home/wcc/RodinHD/data/portrait3d_data
-output_dir=/home/wcc/RodinHD/data/feature
-txt_file=/home/wcc/RodinHD/data/portrait3d_data/fitting_obj_list.txt
+root_path=/home/wcc/RodinHD/data/portrait3dexp_data
+output_dir=/home/wcc/RodinHD/data/feature2
+txt_file=/home/wcc/RodinHD/data/portrait3dexp_data/fitting_obj_list.txt
 vae_dir=/home/wcc/RodinHD/script/vae_model
 
 CUDA_VISIBLE_DEVICES=0 python encode_multiscale_feature.py \

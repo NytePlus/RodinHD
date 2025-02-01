@@ -1,8 +1,9 @@
 data_dir=/home/wcc/RodinHD/data/portrait3d_data
-output_path=/home/wcc/RodinHD/data/save_diffusion
-base_diffusion_ckpt=/home/wcc/RodinHD/data/save_diffusion/checkpoints/model020000.pt
+output_path=/home/wcc/RodinHD/data/save_diffusion_3
+base_diffusion_ckpt=/home/wcc/RodinHD/data/save_diffusion_3/checkpoints/model100000.pt
 render_ckpt=/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth
 txt_file=/home/wcc/RodinHD/data/portrait3d_data/fitting_obj_list.txt
+# txt_file=/home/wcc/RodinHD/data/triplane_128/fitting_obj_list.txt
 render_cam_path=/home/wcc/RodinHD/data/portrait3d_data
 latent_root=/home/wcc/RodinHD/data/feature/latent
 ms_feature_root=/home/wcc/RodinHD/data/feature/ms_latent

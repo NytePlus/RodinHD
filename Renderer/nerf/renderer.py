@@ -164,7 +164,7 @@ class NeRFRenderer(nn.Module):
         sample_dist = (fars - nears) / num_steps
         if perturb:
             z_vals = z_vals + (torch.rand(z_vals.shape, device=device) - 0.5) * sample_dist
-            #z_vals = z_vals.clamp(nears, fars) # avoid out of bounds xyzs.
+            # z_vals = z_vals.clamp(nears, fars) # avoid out of bounds xyzs.
 
         # generate xyzs
         xyzs = rays_o.unsqueeze(-2) + rays_d.unsqueeze(-2) * z_vals.unsqueeze(-1) # [N, 1, 3] * [N, T, 1] -> [N, T, 3]
@@ -280,6 +280,8 @@ class NeRFRenderer(nn.Module):
         # print(f'selfaabb_train: {self.aabb_train}')
         nears, fars = raymarching.near_far_from_aabb(rays_o, rays_d, self.aabb_train if self.training else self.aabb_infer, self.min_near)
         # print(f'nears: {nears} far: {fars}')
+        assert not fars.isnan().any().item(), "fars contains nans."
+
         # mix background color
         if self.bg_radius > 0:
             # use the bg model to calculate bg_color
@@ -297,9 +299,10 @@ class NeRFRenderer(nn.Module):
             counter.zero_() # set to 0
             self.local_step += 1
 
-            import time
-            start = time.time()
+            # import time
+            # start = time.time()
             xyzs, dirs, deltas, rays = raymarching.march_rays_train(rays_o, rays_d, self.bound, self.density_bitfield, self.cascade, self.grid_size, nears, fars, counter, self.mean_count, perturb, 128, force_all_rays, dt_gamma, max_steps)
+            assert not xyzs.isnan().any().item(), "xyzs contains Nans."
             # print(f'march ray time: {time.time() - start}')
 
             # print(f'print: {self.mean_count} xyzs: {xyzs.shape}  x: {rays_o.shape} max_steps: {max_steps} rays: {rays[0: 10]}')
@@ -308,8 +311,8 @@ class NeRFRenderer(nn.Module):
             results['rays[:, 2].max'] = rays[:, 2].max()
 
             if isinstance(triplane, (list, tuple)):
-                import time
-                start = time.time()
+                # import time
+                # start = time.time()
                 sigmas, rgbs = self.forward_sample(triplane, xyzs, dirs, rays)
                 # print(f'forward sample time: {time.time() - start}')
             else:

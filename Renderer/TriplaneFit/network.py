@@ -139,17 +139,21 @@ class NeRFNetwork(NeRFRenderer):
         else:
             inv_planes = torch.linalg.inv(planes).unsqueeze(0).expand(N, -1, -1, -1).reshape(N*n_planes, 3, 3)
         # print(f'coordinates: {coordinates.shape} inv_planes: {inv_planes.shape}')
+        assert not coordinates.isnan().any(), "coordinates contains nans."
         projections = torch.bmm(coordinates, inv_planes)
         return projections[..., :2]
  
     def get_color_feat(self, triplane, x):
-        import time
-        start = time.time()
+        # import time
+        # start = time.time()
+        assert not x.isnan().any().item(), "x contains nans."
         mat_coord = self.project_onto_planes(self.plane_axes, x.unsqueeze(0), self.inv_planes)
 
         # print(f'project time: {time.time() - start}')
-        start = time.time()
+        # start = time.time()
         # print(f'mat_coord: {mat_coord.shape}') # [3, N_sampled, 2]
+        assert not mat_coord.isnan().any().item(), "mat_coord contains nans."
+        assert not triplane.isnan().any().item(), "triplane contains nans."
         mat_feat = torch.mean(self.grid_sample(triplane, mat_coord, self.bound), 0)
         # print(f'grid sample time: {time.time() - start}')
         # print(f'mat_coord: {mat_coord.shape} mat_feat: {mat_feat.shape}')
@@ -250,7 +254,9 @@ class NeRFNetwork(NeRFRenderer):
 
         # sigma
         feat = self.sigma_net(enc_sigma_feat)
-        sigma = trunc_exp(feat[:, 0]) #F.softplus(sigma - 1.0)
+        # Nyte: Is this really don't cause overflow ???
+        # sigma = trunc_exp(feat[:, 0]) #F.softplus(sigma - 1.0)
+        sigma = F.softplus(feat[:, 0])
 
         return {
             'sigma': sigma,

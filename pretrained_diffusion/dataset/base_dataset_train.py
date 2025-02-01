@@ -70,13 +70,14 @@ def load_data(
         latent_root=latent_root,
         ms_feature_root=ms_feature_root,
     )
+    #! modify num_workers from 4 to 0
     if deterministic:
         loader = DataLoader(
-            dataset, batch_size=batch_size, shuffle=False, num_workers=4, drop_last=True, pin_memory=False
+            dataset, batch_size=batch_size, shuffle=False, num_workers=0, drop_last=True, pin_memory=False
         )
     else:
         loader = DataLoader(
-            dataset, batch_size=batch_size, shuffle=True, num_workers=4, drop_last=True, pin_memory=False
+            dataset, batch_size=batch_size, shuffle=True, num_workers=0, drop_last=True, pin_memory=False
         )
     while True:
         yield from loader

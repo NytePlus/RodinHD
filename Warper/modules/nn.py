@@ -8,8 +8,20 @@ import torch as th
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .utils import checkpoint
-
+def checkpoint(func, inputs, params, flag):
+    """
+    Evaluate a function without caching intermediate activations, allowing for
+    reduced memory at the expense of extra compute in the backward pass.
+    :param func: the function to evaluate.
+    :param inputs: the argument sequence to pass to `func`.
+    :param params: a sequence of parameters `func` depends on but does not
+                   explicitly take as arguments.
+    :param flag: if False, disable gradient checkpointing.
+    """
+    if flag:
+        return torchck.checkpoint(func, *inputs)
+    else:
+        return func(*inputs)
 
 def gelu(x):
     return 0.5 * x * (1.0 + th.tanh(0.7978845608028654 * x * (1.0 + 0.044715 * x * x)))
@@ -187,19 +199,21 @@ class CheckpointFunction(th.autograd.Function):
         ctx.run_function = run_function
         ctx.input_tensors = list(args[:length])
         ctx.input_params = list(args[length:])
-        with th.no_grad():
-            output_tensors = ctx.run_function(*ctx.input_tensors)
+        with th.cuda.amp.autocast():
+            with th.no_grad():
+                output_tensors = ctx.run_function(*ctx.input_tensors)
         return output_tensors
 
     @staticmethod
     def backward(ctx, *output_grads):
         ctx.input_tensors = [x.detach().requires_grad_(True) for x in ctx.input_tensors]
-        with th.enable_grad():
-            # Fixes a bug where the first op in run_function modifies the
-            # Tensor storage in place, which is not allowed for detach()'d
-            # Tensors.
-            shallow_copies = [x.view_as(x) for x in ctx.input_tensors]
-            output_tensors = ctx.run_function(*shallow_copies)
+        with th.cuda.amp.autocast():
+            with th.enable_grad():
+                # Fixes a bug where the first op in run_function modifies the
+                # Tensor storage in place, which is not allowed for detach()'d
+                # Tensors.
+                shallow_copies = [x.view_as(x) for x in ctx.input_tensors]
+                output_tensors = ctx.run_function(*shallow_copies)
         input_grads = th.autograd.grad(
             output_tensors,
             ctx.input_tensors + ctx.input_params,

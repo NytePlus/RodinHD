@@ -7,7 +7,7 @@ The module that predicting a dense motion from sparse motion representation give
 from torch import nn
 import torch.nn.functional as F
 import torch
-from Warper.modules.util import Hourglass, make_coordinate_grid, kp2gaussian
+from modules.util import Hourglass, make_coordinate_grid, kp2gaussian
 
 
 class DenseMotionNetwork(nn.Module):
@@ -16,7 +16,7 @@ class DenseMotionNetwork(nn.Module):
         self.hourglass = Hourglass(block_expansion=block_expansion, in_features=(num_kp+1)*compress, max_features=max_features, num_blocks=num_blocks)  # ~60+G
         self.down_scale = down_scale
 
-        # self.mask = nn.Conv2d(self.hourglass.out_filters, num_kp + 1, kernel_size=7, padding=3)  # 65G! NOTE: computation cost is large
+        self.mask = nn.Conv2d(self.hourglass.out_filters, num_kp + 1, kernel_size=7, padding=3)  # 65G! NOTE: computation cost is large
         self.compress = nn.Conv2d(feature_channel, compress, kernel_size=down_scale, stride=down_scale)  # 0.8G
         self.norm = nn.BatchNorm2d(compress, affine=True)
         self.num_kp = num_kp

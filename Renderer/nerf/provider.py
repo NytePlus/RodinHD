@@ -8,7 +8,8 @@ import tqdm
 import numpy as np
 from scipy.spatial.transform import Slerp, Rotation
 import multiprocessing as mp  
-import concurrent.futures  
+import concurrent.futures
+import torchvision.utils as vutils
 
 import trimesh
 import math
@@ -349,18 +350,19 @@ class NeRFDataset:
                     image = cv2.cvtColor(image, cv2.COLOR_BGRA2RGBA)  
             
                 if image.shape[0] != self.H or image.shape[1] != self.W:  
-                    image = cv2.resize(image, (self.W, self.H), interpolation=cv2.INTER_AREA)  
-            
+                    image = cv2.resize(image, (self.W, self.H), interpolation=cv2.INTER_AREA)
+
+                img_np = image
                 image = image.astype(np.float32) / 255 # [H, W, 3/4]  
             
-                return pose, image  
+                return pose, image, img_np
             
             # frames = list(range(0,  num_train_frames)) if (self.training or self.type == 'test_all') else list(range(0,  200))  
             
             with concurrent.futures.ThreadPoolExecutor(max_workers=min(mp.cpu_count(), 16)) as executor:  
                 results = list(executor.map(load_data, frames))  
             
-            self.poses, self.images = zip(*results)
+            self.poses, self.images, self.img_nps = zip(*results)
             if self.type == 'train':
                 visualize_poses(self.poses, os.path.join(self.save_dir, f'gt_poses.glb'))
         self.poses = torch.from_numpy(np.stack(self.poses, axis=0)) # [N, 4, 4]
@@ -416,6 +418,15 @@ class NeRFDataset:
             poses.append(pose)
         return poses
 
+    def get_face_box(self, image):
+        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+        gray_image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+        faces = face_cascade.detectMultiScale(gray_image, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+
+        if len(faces) > 0:
+            return faces[0]
+        return None
+
     def collate(self, index):
 
         B = len(index) # a list of length 1
@@ -440,8 +451,12 @@ class NeRFDataset:
         poses = self.poses[index].to(self.device) # [B, 4, 4]
  
         error_map = None if self.error_map is None else self.error_map[index]
-        
-        rays = get_rays(poses, self.intrinsics, self.H, self.W, self.num_rays, error_map, self.opt.patch_size)
+
+        if self.img_nps is not None and self.face:
+            face_box = self.get_face_box(self.img_nps[index[0]])
+            rays = get_rays(poses, self.intrinsics, self.H, self.W, self.num_rays, error_map, self.opt.patch_size, face_box)
+        else:
+            rays = get_rays(poses, self.intrinsics, self.H, self.W, self.num_rays, error_map, self.opt.patch_size)
 
         results = {
             'H': self.H,
@@ -453,10 +468,28 @@ class NeRFDataset:
         if self.images is not None:
             images = self.images[index].to(self.device) # [B, H, W, 3/4]
             if self.training:
+                if index[0] == 0:
+                    # Nyte's debug
+                    B, H, W, C = images.shape
+                    N = rays['inds'].shape[1]  # 假设 rays['inds'] 的形状是 [B, N]
+
+                    images_flat = images.view(B, -1, C)
+                    gathered_images = torch.gather(images_flat, 1, torch.stack(C * [rays['inds']], -1))  # [B, N, C]
+                    white_background = torch.ones(B, H * W, C).to(self.device)
+                    if images.dtype == torch.uint8:
+                        white_background *= 255
+
+                    white_background.scatter_(1, torch.stack(C * [rays['inds']], -1), gathered_images)
+                    final_images = white_background.view(B, H, W, C)
+
+                    vutils.save_image(images.permute(0, 3, 1, 2), '/home/wcc/RodinHD/data_util/original_images.png')
+                    vutils.save_image(final_images.permute(0, 3, 1, 2), '/home/wcc/RodinHD/data_util/gathered_images.png')
+                    # end debug
+
                 C = images.shape[-1]
                 images = torch.gather(images.view(B, -1, C), 1, torch.stack(C * [rays['inds']], -1)) # [B, N, 3/4]
             results['images'] = images
-        
+
         # need inds to update error_map
         if error_map is not None:
             results['index'] = index
@@ -520,7 +553,8 @@ class NeRFDataset:
 
         return results
 
-    def dataloader(self, shuffle_rays = False):
+    def dataloader(self, shuffle_rays = False, face = False):
+        self.face = face
         size = len(self.poses)
         if self.training and self.rand_pose > 0:
             size += size // self.rand_pose # index >= size means we use random pose.

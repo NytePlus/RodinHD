@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.checkpoint as torchck
 
-from Warper.modules.nn import avg_pool_nd, conv_nd, normalization, timestep_embedding, zero_module, Conv3DAware
+from Warper.modules.nn import avg_pool_nd, conv_nd, normalization, timestep_embedding, zero_module, Conv3DAware, AttentionPooling, checkpoint
 from Warper.modules.fp16_util import convert_module_to_f16, convert_module_to_f32
 
 _FORCE_MEM_EFFICIENT_ATTN = 0
@@ -13,20 +13,20 @@ print('FORCE_MEM_EFFICIENT_ATTN=', _FORCE_MEM_EFFICIENT_ATTN, '@UNET:QKVATTENTIO
 if _FORCE_MEM_EFFICIENT_ATTN:
     from xformers.ops import memory_efficient_attention  # noqa
 
-def checkpoint(func, inputs, params, flag):
+
+class EmbedSequential(nn.Sequential):
     """
-    Evaluate a function without caching intermediate activations, allowing for
-    reduced memory at the expense of extra compute in the backward pass.
-    :param func: the function to evaluate.
-    :param inputs: the argument sequence to pass to `func`.
-    :param params: a sequence of parameters `func` depends on but does not
-                   explicitly take as arguments.
-    :param flag: if False, disable gradient checkpointing.
+    A sequential module that passes timestep embeddings to the children that
+    support it as an extra input.
     """
-    if flag:
-        return torchck.checkpoint(func, *inputs)
-    else:
-        return func(*inputs)
+
+    def forward(self, x, encoder_out=None):
+        for layer in self:
+            if isinstance(layer, AttentionBlock):
+                x = layer(x, encoder_out)
+            else:
+                x = layer(x)
+        return x
 
 class Upsample(nn.Module):
     """
@@ -90,7 +90,6 @@ class ResBlock(nn.Module):
     A residual block that can optionally change the number of channels.
 
     :param channels: the number of input channels.
-    :param emb_channels: the number of timestep embedding channels.
     :param dropout: the rate of dropout.
     :param out_channels: if specified, the number of out channels.
     :param use_conv: if True and out_channels is specified, use a spatial
@@ -164,8 +163,8 @@ class ResBlock(nn.Module):
         else:
             self.skip_connection = conv_nd(dims, channels, self.out_channels, 1)
 
-    def forward(self, x, emb):
-        return checkpoint(self._forward, (x, emb), self.parameters(), self.use_checkpoint)
+    def forward(self, x):
+        return checkpoint(self._forward, [x], self.parameters(), self.use_checkpoint)
 
     def _forward(self, x):
         """
@@ -348,7 +347,9 @@ class UNetModel(nn.Module):
             raise "Class embedding is not supported."
 
         ch = input_ch = int(channel_mult[0] * model_channels)
-        self.input_blocks = nn.ModuleList([])
+        self.input_blocks = nn.ModuleList(
+            [EmbedSequential(conv_nd(dims, in_channels, ch, 3, padding=1))]
+        )
         self._feature_size = ch
         input_block_chans = [ch]
         ds = 1
@@ -378,13 +379,13 @@ class UNetModel(nn.Module):
                             encoder_channels=encoder_channels,
                         )
                     )
-                self.input_blocks.append(nn.Sequential(*layers))
+                self.input_blocks.append(EmbedSequential(*layers))
                 self._feature_size += ch
                 input_block_chans.append(ch)
             if level != len(channel_mult) - 1:
                 out_ch = ch
                 self.input_blocks.append(
-                    nn.Sequential(
+                    EmbedSequential(
                         ResBlock(
                             ch,
                             dropout,
@@ -404,7 +405,7 @@ class UNetModel(nn.Module):
                 ds *= 2
                 self._feature_size += ch
 
-        self.middle_block = nn.Sequential(
+        self.middle_block = EmbedSequential(
             ResBlock(
                 ch,
                 dropout,
@@ -474,7 +475,7 @@ class UNetModel(nn.Module):
                         else Upsample(ch, conv_resample, dims=dims, out_channels=out_ch)
                     )
                     ds //= 2
-                self.output_blocks.append(nn.Sequential(*layers))
+                self.output_blocks.append(EmbedSequential(*layers))
                 self._feature_size += ch
 
         self.out = nn.Sequential(
@@ -517,8 +518,7 @@ class UNetModel(nn.Module):
         emb = self.time_embed(timestep_embedding(timesteps, self.model_channels))
 
         if self.num_classes is not None:
-            assert y.shape == (x.shape[0],)
-            emb = emb + self.label_emb(y)
+            raise "Class label is not supported."
 
         h = x.type(self.dtype)
 
@@ -531,3 +531,107 @@ class UNetModel(nn.Module):
             h = module(h, emb)
         h = h.type(x.dtype)
         return self.out(h)
+
+
+class WarpingNetwork(nn.Module):
+    def __init__(
+            self,
+            xf_width,
+            model_channels,
+            out_channels,
+            num_res_blocks,
+            attention_resolutions,
+            dropout,
+            channel_mult,
+            use_fp16,
+            num_heads,
+            num_heads_upsample,
+            num_head_channels,
+            use_scale_shift_norm,
+            resblock_updown,
+            in_channels=32,
+    ):
+        super().__init__()
+
+        self.in_channels = in_channels
+        class_name = MultiscaleVAELatentUNet
+        self.decoder = class_name(
+            in_channels,
+            model_channels,
+            out_channels,
+            num_res_blocks,
+            attention_resolutions,
+            dropout=dropout,
+            channel_mult=channel_mult,
+            use_fp16=use_fp16,
+            num_heads=num_heads,
+            num_heads_upsample=num_heads_upsample,
+            num_head_channels=num_head_channels,
+            use_scale_shift_norm=use_scale_shift_norm,
+            resblock_updown=resblock_updown,
+            encoder_channels=xf_width
+        )
+
+    def forward(self, xt, vae_ms_feature=None):
+        pred = self.decoder(xt, vae_ms_feature)
+        return pred
+
+
+class MultiscaleVAELatentUNet(UNetModel):
+    def __init__(
+            self,
+            in_channels,
+            *args,
+            **kwargs,
+    ):
+        super().__init__(in_channels, *args, **kwargs)
+        self.dtype = th.float32
+        patch_size = 16
+        encoder_dim = 64
+        att_pool_heads = 8
+        self.scaling_factor = 0.13025
+
+        self.norm32 = normalization(512)
+        self.norm64 = normalization(256)
+        self.norm128 = normalization(128)
+        self.vae_ms_feature_proj_32 = nn.Conv2d(512, self.encoder_channels, kernel_size=4, stride=4, bias=False)
+        self.vae_ms_feature_proj_64 = nn.Conv2d(256, self.encoder_channels, kernel_size=8, stride=8, bias=False)
+        self.vae_ms_feature_proj_128 = nn.Conv2d(128, self.encoder_channels, kernel_size=16, stride=16, bias=False)
+
+    def forward(self, x, vae_ms_feature):
+        '''
+        latent_outputs: dict {'last_hidden_state': tensor, 'pooler_output': tensor}
+        '''
+        input_type = x.dtype
+        x = x.type(self.dtype)
+        hs = []
+
+        vae_feature_32 = self.vae_ms_feature_proj_32(self.norm32(vae_ms_feature[2]).type(self.dtype))
+        vae_feature_32 = vae_feature_32.reshape(vae_feature_32.shape[0], vae_feature_32.shape[1],
+                                                -1)  # shape: (N, C, L)
+        vae_feature_64 = self.vae_ms_feature_proj_64(self.norm64(vae_ms_feature[1]).type(self.dtype))
+        vae_feature_64 = vae_feature_64.reshape(vae_feature_64.shape[0], vae_feature_64.shape[1],
+                                                -1)  # shape: (N, C, L)
+        vae_feature_128 = self.vae_ms_feature_proj_128(self.norm128(vae_ms_feature[0]).type(self.dtype))
+        vae_feature_128 = vae_feature_128.reshape(vae_feature_128.shape[0], vae_feature_128.shape[1],
+                                                  -1)  # shape: (N, C, L)
+        encoder_out_feature = {32: vae_feature_128, 16: vae_feature_64, 8: vae_feature_32}
+
+        h = x.type(self.dtype)
+        for module in self.input_blocks:
+            encoder_out = encoder_out_feature[h.shape[-2]] if h.shape[-2] in encoder_out_feature else None
+            h = module(h, encoder_out)
+            hs.append(h)
+
+        encoder_out = encoder_out_feature[h.shape[-2]] if h.shape[-2] in encoder_out_feature else None
+        h = self.middle_block(h, encoder_out)
+
+        for module in self.output_blocks:
+            encoder_out = encoder_out_feature[h.shape[-2]] if h.shape[-2] in encoder_out_feature else None
+            h = th.cat([h, hs.pop()], dim=1)
+            h = module(h, encoder_out)
+        h = h.type(input_type)
+        h = self.out(h)
+        return h.type(input_type)
+
+

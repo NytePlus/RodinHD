@@ -1,0 +1,975 @@
+[2025-01-24 03:08:59,573] [INFO] [real_accelerator.py:203:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[93m [WARNING] [0m async_io requires the dev libaio .so object and headers but these were not found.
+[93m [WARNING] [0m async_io: please install the libaio-dev package with apt
+[93m [WARNING] [0m If libaio is already installed (perhaps from source), try setting the CFLAGS and LDFLAGS environment variables to where it can be found.
+FORCE_MEM_EFFICIENT_ATTN= 0 @UNET:QKVATTENTION
+[2025-01-24 03:09:01,673] [INFO] [comm.py:637:init_distributed] cdb=None
+Training with ch_mult:  (1, 1, 2, 3, 4)
+Predict type:  noise
+Beta schedule:  cosine_light
+logdir: /home/wcc/RodinHD/data/save_diffusion_2
+makedir dir: /home/wcc/RodinHD/data/save_diffusion_2
+Logging to /home/wcc/RodinHD/data/save_diffusion_2
+loading model from  /home/wcc/RodinHD/data/save_diffusion_2/checkpoints/model015000.pt
+Predict type:  noise
+Beta schedule:  cosine_light
+creating data loader...
+sampling...
+10
+[2025-01-24 03:09:10,819] [INFO] [real_accelerator.py:203:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2025-01-24 03:09:10,864] [INFO] [real_accelerator.py:203:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2025-01-24 03:09:10,883] [INFO] [real_accelerator.py:203:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2025-01-24 03:09:11,068] [INFO] [real_accelerator.py:203:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+sampling triplane  0
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  10%|█         | 1/10 [00:03<00:29,  3.25s/it]DDIM Sampler:  20%|██        | 2/10 [00:03<00:11,  1.47s/it]DDIM Sampler:  30%|███       | 3/10 [00:03<00:06,  1.12it/s]DDIM Sampler:  40%|████      | 4/10 [00:03<00:03,  1.59it/s]DDIM Sampler:  50%|█████     | 5/10 [00:04<00:02,  2.10it/s]DDIM Sampler:  60%|██████    | 6/10 [00:04<00:01,  2.60it/s]DDIM Sampler:  70%|███████   | 7/10 [00:04<00:00,  3.00it/s]DDIM Sampler:  80%|████████  | 8/10 [00:04<00:00,  3.34it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:04<00:00,  3.67it/s]DDIM Sampler: 100%|██████████| 10/10 [00:05<00:00,  3.83it/s]DDIM Sampler: 100%|██████████| 10/10 [00:05<00:00,  1.92it/s]
+sampling triplane  1
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  6.72it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  5.62it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  5.30it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:00,  5.08it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  4.79it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  4.76it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  4.68it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  4.66it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.69it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.93it/s]
+sampling triplane  2
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  6.90it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  5.53it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  5.14it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:01,  4.92it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  4.79it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  4.80it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  4.78it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  4.59it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.55it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.86it/s]
+sampling triplane  3
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  6.94it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  5.54it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  5.16it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:01,  4.93it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  4.81it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  4.82it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  4.79it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  4.63it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.60it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.89it/s]
+sampling triplane  4
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  6.72it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  5.60it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  5.28it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:00,  5.12it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  4.82it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  4.70it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  4.66it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  4.54it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.54it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.85it/s]
+sampling triplane  5
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  6.38it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  5.62it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  5.24it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:01,  4.87it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  4.81it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  4.71it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  4.67it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  4.68it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.69it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.89it/s]
+sampling triplane  6
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  6.87it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  5.54it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  5.25it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:01,  4.93it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  4.87it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  4.87it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  4.59it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  4.62it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.51it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.85it/s]
+sampling triplane  7
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  6.85it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  5.57it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  5.22it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:00,  5.11it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  4.83it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  4.73it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  4.69it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  4.66it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.71it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.93it/s]
+sampling triplane  8
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  6.92it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  5.52it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  5.24it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:01,  4.92it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  4.86it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  4.87it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  4.58it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  4.65it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.54it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.86it/s]
+sampling triplane  9
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  6.84it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  5.57it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  5.24it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:00,  5.13it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  4.85it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  4.70it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  4.72it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  4.64it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.67it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.92it/s]
+[93m [WARNING] [0m async_io requires the dev libaio .so object and headers but these were not found.
+[93m [WARNING] [0m async_io: please install the libaio-dev package with apt
+[93m [WARNING] [0m If libaio is already installed (perhaps from source), try setting the CFLAGS and LDFLAGS environment variables to where it can be found.
+FORCE_MEM_EFFICIENT_ATTN= 0 @UNET:QKVATTENTION
+[93m [WARNING] [0m async_io requires the dev libaio .so object and headers but these were not found.
+[93m [WARNING] [0m async_io: please install the libaio-dev package with apt
+[93m [WARNING] [0m If libaio is already installed (perhaps from source), try setting the CFLAGS and LDFLAGS environment variables to where it can be found.
+FORCE_MEM_EFFICIENT_ATTN= 0 @UNET:QKVATTENTION
+[93m [WARNING] [0m async_io requires the dev libaio .so object and headers but these were not found.
+[93m [WARNING] [0m async_io: please install the libaio-dev package with apt
+[93m [WARNING] [0m If libaio is already installed (perhaps from source), try setting the CFLAGS and LDFLAGS environment variables to where it can be found.
+FORCE_MEM_EFFICIENT_ATTN= 0 @UNET:QKVATTENTION
+[93m [WARNING] [0m async_io requires the dev libaio .so object and headers but these were not found.
+[93m [WARNING] [0m async_io: please install the libaio-dev package with apt
+[93m [WARNING] [0m If libaio is already installed (perhaps from source), try setting the CFLAGS and LDFLAGS environment variables to where it can be found.
+FORCE_MEM_EFFICIENT_ATTN= 0 @UNET:QKVATTENTION
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CudaIPCTypes.cpp:15] Producer process has been terminated before all shared CUDA tensors released. See Note [Sharing CUDA tensors]
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: invalid device ordinal (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: invalid device ordinal (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+Using /home/wcc/.cache/torch_extensions/py39_cu117 as PyTorch extensions root...
+Detected CUDA files, patching ldflags
+Emitting ninja build file /home/wcc/.cache/torch_extensions/py39_cu117/_raymarching/build.ninja...
+Building extension module _raymarching...
+Allowing ninja to set a default number of workers... (overridable by setting the environment variable MAX_JOBS=N)
+ninja: no work to do.
+Loading extension module _raymarching...
+Using /home/wcc/.cache/torch_extensions/py39_cu117 as PyTorch extensions root...
+Detected CUDA files, patching ldflags
+Emitting ninja build file /home/wcc/.cache/torch_extensions/py39_cu117/_grid_encoder/build.ninja...
+Building extension module _grid_encoder...
+Allowing ninja to set a default number of workers... (overridable by setting the environment variable MAX_JOBS=N)
+ninja: no work to do.
+Loading extension module _grid_encoder...
+Using /home/wcc/.cache/torch_extensions/py39_cu117 as PyTorch extensions root...
+Detected CUDA files, patching ldflags
+Emitting ninja build file /home/wcc/.cache/torch_extensions/py39_cu117/_freqencoder/build.ninja...
+Building extension module _freqencoder...
+Allowing ninja to set a default number of workers... (overridable by setting the environment variable MAX_JOBS=N)
+Namespace(path='/home/wcc/RodinHD/data/triplane_128/fitting_obj_list.txt', save_dir='/home/wcc/RodinHD/data/save_diffusion_2/LR', data_root='/home/wcc/RodinHD/data/portrait3d_data', O=True, test=True, ray_shuffle=False, no_grid=False, workspace='/home/wcc/RodinHD/data/save_diffusion_2/render_lr', seed=0, dataset='portrait3d', finetune=False, iters=15000, lr0=0.02, lr1=0.0, ckpt='/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth', num_rays=8192, cuda_ray=True, max_steps=1024, num_steps=512, update_extra_interval=16, upsample_steps=0, max_ray_batch=8192, l1_reg_weight=0.0001, tv_weight=0.02, dist_weight=0.002, iwc_weight=0.1, patch_size=1, fp16=True, cp=False, triplane_channels=32, downscale=1, resolution0=512, resolution1=512, upsample_model_steps=[], grid_size=256, color_space='srgb', preload=False, bound=1.0, scale=0.8, offset=[0, 0, 0], dt_gamma=0.0, min_near=0.2, density_thresh=10, bg_radius=-1, gui=False, W=1920, H=1080, radius=5, fovy=50, max_spp=64, num_train_frames=300, out_loop_eps=1, eval_freq=10, no_tqdm=False, random_noise=False, random_scale=False, error_map=False, clip_text='', rand_pose=-1, start_idx=0, end_idx=10, eval_video=False)
+Comm size: 1, Rank: 0
+setup done.
+Render using grid size:  256
+ninja: no work to do.
+Loading extension module _freqencoder...
+NeRFNetwork(
+  (grid_sample): GridEncoder: input_dim=2 num_levels=3 level_dim=32 resolution=512 -> 512 per_level_scale=1.0000 gridtype=tiled align_corners=True interpolation=linear
+  (encoder): FreqEncoder: input_dim=24 degree=2 output_dim=120
+  (encoder_sigma): FreqEncoder: input_dim=8 degree=2 output_dim=40
+  (encoder_dir): FreqEncoder: input_dim=3 degree=2 output_dim=15
+  (color_net): ModuleList(
+    (0): Linear(in_features=263, out_features=128, bias=False)
+    (1): Linear(in_features=128, out_features=128, bias=False)
+    (2): Linear(in_features=128, out_features=3, bias=False)
+  )
+  (sigma_net): Sequential(
+    (0): Linear(in_features=40, out_features=128, bias=True)
+    (1): Softplus(beta=1, threshold=20)
+    (2): Linear(in_features=128, out_features=129, bias=True)
+  )
+)
+[INFO] Trainer: ngp | 2025-01-24_03-09-44 | cuda:0 | fp16 | 
+/home/wcc/RodinHD/data/save_diffusion_2/render_lr
+[INFO] #parameters: 72321
+[INFO] Loading 
+/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth ...
+[INFO] loaded model.
+Traceback (most recent call last):
+  File "/home/wcc/RodinHD/Renderer/main.py", line 157, in <module>
+    test_loader, triplane = NeRFDataset(opt,  root_path=os.path.join(opt.data_root, sid), save_dir=opt.save_dir, device=device, type='test' if not opt.eval_video else 'test_video', downscale=opt.downscale, triplane_resolution=opt.resolution0, triplane_channels=opt.triplane_channels, num_train_frames=opt.num_train_frames).dataloader()
+  File "/home/wcc/RodinHD/Renderer/nerf/provider.py", line 312, in __init__
+    with open(os.path.join(self.root_path,  'metadata_000000.json'), 'r') as f:
+FileNotFoundError: [Errno 2] No such file or directory: '/home/wcc/RodinHD/data/triplane_128/portrait3d_1/metadata_000000.json'
+[2025-01-24 03:14:36,064] [INFO] [real_accelerator.py:203:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[93m [WARNING] [0m async_io requires the dev libaio .so object and headers but these were not found.
+[93m [WARNING] [0m async_io: please install the libaio-dev package with apt
+[93m [WARNING] [0m If libaio is already installed (perhaps from source), try setting the CFLAGS and LDFLAGS environment variables to where it can be found.
+FORCE_MEM_EFFICIENT_ATTN= 0 @UNET:QKVATTENTION
+[2025-01-24 03:14:38,164] [INFO] [comm.py:637:init_distributed] cdb=None
+Training with ch_mult:  (1, 1, 2, 3, 4)
+Predict type:  noise
+Beta schedule:  cosine_light
+logdir: /home/wcc/RodinHD/data/save_diffusion_2
+makedir dir: /home/wcc/RodinHD/data/save_diffusion_2
+Logging to /home/wcc/RodinHD/data/save_diffusion_2
+loading model from  /home/wcc/RodinHD/data/save_diffusion_2/checkpoints/model015000.pt
+Predict type:  noise
+Beta schedule:  cosine_light
+creating data loader...
+sampling...
+10
+[2025-01-24 03:14:47,294] [INFO] [real_accelerator.py:203:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2025-01-24 03:14:47,353] [INFO] [real_accelerator.py:203:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2025-01-24 03:14:47,464] [INFO] [real_accelerator.py:203:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2025-01-24 03:14:47,498] [INFO] [real_accelerator.py:203:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+sampling triplane  0
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  10%|█         | 1/10 [00:02<00:24,  2.69s/it]DDIM Sampler:  20%|██        | 2/10 [00:02<00:09,  1.22s/it]DDIM Sampler:  30%|███       | 3/10 [00:03<00:05,  1.33it/s]DDIM Sampler:  40%|████      | 4/10 [00:03<00:03,  1.89it/s]DDIM Sampler:  50%|█████     | 5/10 [00:03<00:02,  2.45it/s]DDIM Sampler:  60%|██████    | 6/10 [00:03<00:01,  2.99it/s]DDIM Sampler:  70%|███████   | 7/10 [00:03<00:00,  3.48it/s]DDIM Sampler:  80%|████████  | 8/10 [00:04<00:00,  3.90it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:04<00:00,  4.18it/s]DDIM Sampler: 100%|██████████| 10/10 [00:04<00:00,  4.39it/s]DDIM Sampler: 100%|██████████| 10/10 [00:04<00:00,  2.26it/s]
+sampling triplane  1
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  6.94it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  6.06it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:00,  6.12it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:00,  6.38it/s]DDIM Sampler:  60%|██████    | 6/10 [00:00<00:00,  6.09it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  5.70it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  5.50it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  5.34it/s]DDIM Sampler: 100%|██████████| 10/10 [00:01<00:00,  5.24it/s]DDIM Sampler: 100%|██████████| 10/10 [00:01<00:00,  5.68it/s]
+sampling triplane  2
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  7.20it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  6.26it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  5.76it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:00,  5.58it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  5.45it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  5.36it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  5.35it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  5.32it/s]DDIM Sampler: 100%|██████████| 10/10 [00:01<00:00,  5.32it/s]DDIM Sampler: 100%|██████████| 10/10 [00:01<00:00,  5.54it/s]
+sampling triplane  3
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  6.92it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  6.05it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  5.59it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:00,  5.34it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  5.36it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  5.72it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  5.80it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  5.55it/s]DDIM Sampler: 100%|██████████| 10/10 [00:01<00:00,  5.34it/s]DDIM Sampler: 100%|██████████| 10/10 [00:01<00:00,  5.58it/s]
+sampling triplane  4
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  7.27it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  6.12it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  5.76it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:00,  5.46it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  5.38it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  5.30it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  5.24it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  5.27it/s]DDIM Sampler: 100%|██████████| 10/10 [00:01<00:00,  5.21it/s]DDIM Sampler: 100%|██████████| 10/10 [00:01<00:00,  5.46it/s]
+sampling triplane  5
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  7.46it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  6.34it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  5.74it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:00,  5.44it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  5.30it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  5.18it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  5.17it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  5.52it/s]DDIM Sampler: 100%|██████████| 10/10 [00:01<00:00,  5.79it/s]DDIM Sampler: 100%|██████████| 10/10 [00:01<00:00,  5.66it/s]
+sampling triplane  6
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  7.14it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  6.14it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  5.63it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:00,  5.39it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  5.32it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  5.21it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  5.21it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  5.18it/s]DDIM Sampler: 100%|██████████| 10/10 [00:01<00:00,  5.16it/s]DDIM Sampler: 100%|██████████| 10/10 [00:01<00:00,  5.39it/s]
+sampling triplane  7
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  7.35it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  6.38it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  5.88it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:00,  5.64it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  5.37it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  5.23it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  5.14it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  5.07it/s]DDIM Sampler: 100%|██████████| 10/10 [00:01<00:00,  5.17it/s]DDIM Sampler: 100%|██████████| 10/10 [00:01<00:00,  5.45it/s]
+sampling triplane  8
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:00, 10.19it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  5.83it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:00,  5.47it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  5.22it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  4.92it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  4.88it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  4.75it/s]DDIM Sampler: 100%|██████████| 10/10 [00:01<00:00,  4.74it/s]DDIM Sampler: 100%|██████████| 10/10 [00:01<00:00,  5.16it/s]
+sampling triplane  9
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  6.44it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  5.66it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  5.25it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:01,  4.88it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  4.82it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  4.72it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  4.71it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  4.75it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.69it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.91it/s]
+[93m [WARNING] [0m async_io requires the dev libaio .so object and headers but these were not found.
+[93m [WARNING] [0m async_io: please install the libaio-dev package with apt
+[93m [WARNING] [0m If libaio is already installed (perhaps from source), try setting the CFLAGS and LDFLAGS environment variables to where it can be found.
+FORCE_MEM_EFFICIENT_ATTN= 0 @UNET:QKVATTENTION
+[93m [WARNING] [0m async_io requires the dev libaio .so object and headers but these were not found.
+[93m [WARNING] [0m async_io: please install the libaio-dev package with apt
+[93m [WARNING] [0m If libaio is already installed (perhaps from source), try setting the CFLAGS and LDFLAGS environment variables to where it can be found.
+FORCE_MEM_EFFICIENT_ATTN= 0 @UNET:QKVATTENTION
+[93m [WARNING] [0m async_io requires the dev libaio .so object and headers but these were not found.
+[93m [WARNING] [0m async_io: please install the libaio-dev package with apt
+[93m [WARNING] [0m If libaio is already installed (perhaps from source), try setting the CFLAGS and LDFLAGS environment variables to where it can be found.
+FORCE_MEM_EFFICIENT_ATTN= 0 @UNET:QKVATTENTION
+[93m [WARNING] [0m async_io requires the dev libaio .so object and headers but these were not found.
+[93m [WARNING] [0m async_io: please install the libaio-dev package with apt
+[93m [WARNING] [0m If libaio is already installed (perhaps from source), try setting the CFLAGS and LDFLAGS environment variables to where it can be found.
+FORCE_MEM_EFFICIENT_ATTN= 0 @UNET:QKVATTENTION
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CudaIPCTypes.cpp:15] Producer process has been terminated before all shared CUDA tensors released. See Note [Sharing CUDA tensors]
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: invalid device ordinal (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: invalid device ordinal (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+Using /home/wcc/.cache/torch_extensions/py39_cu117 as PyTorch extensions root...
+Detected CUDA files, patching ldflags
+Emitting ninja build file /home/wcc/.cache/torch_extensions/py39_cu117/_raymarching/build.ninja...
+Building extension module _raymarching...
+Allowing ninja to set a default number of workers... (overridable by setting the environment variable MAX_JOBS=N)
+ninja: no work to do.
+Loading extension module _raymarching...
+Using /home/wcc/.cache/torch_extensions/py39_cu117 as PyTorch extensions root...
+Detected CUDA files, patching ldflags
+Emitting ninja build file /home/wcc/.cache/torch_extensions/py39_cu117/_grid_encoder/build.ninja...
+Building extension module _grid_encoder...
+Allowing ninja to set a default number of workers... (overridable by setting the environment variable MAX_JOBS=N)
+ninja: no work to do.
+Loading extension module _grid_encoder...
+Using /home/wcc/.cache/torch_extensions/py39_cu117 as PyTorch extensions root...
+Detected CUDA files, patching ldflags
+Emitting ninja build file /home/wcc/.cache/torch_extensions/py39_cu117/_freqencoder/build.ninja...
+Building extension module _freqencoder...
+Allowing ninja to set a default number of workers... (overridable by setting the environment variable MAX_JOBS=N)
+Namespace(path='/home/wcc/RodinHD/data/portrait3d_data/fitting_obj_list.txt', save_dir='/home/wcc/RodinHD/data/save_diffusion_2/LR', data_root='/home/wcc/RodinHD/data/portrait3d_data', O=True, test=True, ray_shuffle=False, no_grid=False, workspace='/home/wcc/RodinHD/data/save_diffusion_2/render_lr', seed=0, dataset='portrait3d', finetune=False, iters=15000, lr0=0.02, lr1=0.0, ckpt='/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth', num_rays=8192, cuda_ray=True, max_steps=1024, num_steps=512, update_extra_interval=16, upsample_steps=0, max_ray_batch=8192, l1_reg_weight=0.0001, tv_weight=0.02, dist_weight=0.002, iwc_weight=0.1, patch_size=1, fp16=True, cp=False, triplane_channels=32, downscale=1, resolution0=512, resolution1=512, upsample_model_steps=[], grid_size=256, color_space='srgb', preload=False, bound=1.0, scale=0.8, offset=[0, 0, 0], dt_gamma=0.0, min_near=0.2, density_thresh=10, bg_radius=-1, gui=False, W=1920, H=1080, radius=5, fovy=50, max_spp=64, num_train_frames=300, out_loop_eps=1, eval_freq=10, no_tqdm=False, random_noise=False, random_scale=False, error_map=False, clip_text='', rand_pose=-1, start_idx=0, end_idx=10, eval_video=False)
+Comm size: 1, Rank: 0
+setup done.
+Render using grid size:  256
+ninja: no work to do.
+Loading extension module _freqencoder...
+NeRFNetwork(
+  (grid_sample): GridEncoder: input_dim=2 num_levels=3 level_dim=32 resolution=512 -> 512 per_level_scale=1.0000 gridtype=tiled align_corners=True interpolation=linear
+  (encoder): FreqEncoder: input_dim=24 degree=2 output_dim=120
+  (encoder_sigma): FreqEncoder: input_dim=8 degree=2 output_dim=40
+  (encoder_dir): FreqEncoder: input_dim=3 degree=2 output_dim=15
+  (color_net): ModuleList(
+    (0): Linear(in_features=263, out_features=128, bias=False)
+    (1): Linear(in_features=128, out_features=128, bias=False)
+    (2): Linear(in_features=128, out_features=3, bias=False)
+  )
+  (sigma_net): Sequential(
+    (0): Linear(in_features=40, out_features=128, bias=True)
+    (1): Softplus(beta=1, threshold=20)
+    (2): Linear(in_features=128, out_features=129, bias=True)
+  )
+)
+[INFO] Trainer: ngp | 2025-01-24_03-15-18 | cuda:0 | fp16 | 
+/home/wcc/RodinHD/data/save_diffusion_2/render_lr
+[INFO] #parameters: 72321
+[INFO] Loading 
+/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth ...
+[INFO] loaded model.
+Loading triplane from /home/wcc/RodinHD/data/save_diffusion_2/LR/portrait3d_1.npy
+tensor(-0.8447) tensor(-0.0068)
+++> Evaluate portrait3d_1 at epoch 0 ...
+  0% 0/5 [00:00<?, ?it/s]loss=0.1707 (0.1707): :   0% 0/5 [00:04<?, ?it/s]loss=0.1707 (0.1707): :  20% 1/5 [00:04<00:17,  4.29s/it]loss=0.1814 (0.1760): :  20% 1/5 [00:08<00:17,  4.29s/it]loss=0.1814 (0.1760): :  40% 2/5 [00:08<00:12,  4.23s/it]loss=0.1830 (0.1783): :  40% 2/5 [00:13<00:12,  4.23s/it]loss=0.1830 (0.1783): :  60% 3/5 [00:13<00:08,  4.42s/it]loss=0.1623 (0.1743): :  60% 3/5 [00:17<00:08,  4.42s/it]loss=0.1623 (0.1743): :  80% 4/5 [00:17<00:04,  4.34s/it]loss=0.1794 (0.1753): :  80% 4/5 [00:21<00:04,  4.34s/it]loss=0.1794 (0.1753): : 100% 5/5 [00:21<00:00,  4.28s/it]loss=0.1794 (0.1753): : 100% 5/5 [00:21<00:00,  4.30s/it]
+PSNR = 7.565886 portrait3d_1
+++> Evaluate portrait3d_1 of epoch 0 Finished.
+[INFO] Trainer: ngp | 2025-01-24_03-15-49 | cuda:0 | fp16 | 
+/home/wcc/RodinHD/data/save_diffusion_2/render_lr
+[INFO] #parameters: 72321
+[INFO] Loading 
+/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth ...
+[INFO] loaded model.
+Loading triplane from /home/wcc/RodinHD/data/save_diffusion_2/LR/portrait3d_2.npy
+tensor(-1.) tensor(-0.0012)
+++> Evaluate portrait3d_2 at epoch 0 ...
+  0% 0/5 [00:00<?, ?it/s]loss=0.0809 (0.0809): :   0% 0/5 [00:03<?, ?it/s]loss=0.0809 (0.0809): :  20% 1/5 [00:03<00:15,  3.81s/it]loss=0.0787 (0.0798): :  20% 1/5 [00:07<00:15,  3.81s/it]loss=0.0787 (0.0798): :  40% 2/5 [00:07<00:11,  3.83s/it]loss=0.0638 (0.0745): :  40% 2/5 [00:11<00:11,  3.83s/it]loss=0.0638 (0.0745): :  60% 3/5 [00:11<00:07,  3.86s/it]loss=0.0936 (0.0792): :  60% 3/5 [00:15<00:07,  3.86s/it]loss=0.0936 (0.0792): :  80% 4/5 [00:15<00:03,  3.82s/it]loss=0.0789 (0.0792): :  80% 4/5 [00:19<00:03,  3.82s/it]loss=0.0789 (0.0792): : 100% 5/5 [00:19<00:00,  3.80s/it]loss=0.0789 (0.0792): : 100% 5/5 [00:19<00:00,  3.82s/it]
+PSNR = 11.046030 portrait3d_2
+++> Evaluate portrait3d_2 of epoch 0 Finished.
+[INFO] Trainer: ngp | 2025-01-24_03-16-15 | cuda:0 | fp16 | 
+/home/wcc/RodinHD/data/save_diffusion_2/render_lr
+[INFO] #parameters: 72321
+[INFO] Loading 
+/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth ...
+[INFO] loaded model.
+Loading triplane from /home/wcc/RodinHD/data/save_diffusion_2/LR/portrait3d_3.npy
+tensor(-0.9546) tensor(-0.0051)
+++> Evaluate portrait3d_3 at epoch 0 ...
+  0% 0/5 [00:00<?, ?it/s]loss=0.1734 (0.1734): :   0% 0/5 [00:04<?, ?it/s]loss=0.1734 (0.1734): :  20% 1/5 [00:04<00:16,  4.18s/it]loss=0.1591 (0.1662): :  20% 1/5 [00:08<00:16,  4.18s/it]loss=0.1591 (0.1662): :  40% 2/5 [00:08<00:12,  4.23s/it]loss=0.1851 (0.1725): :  40% 2/5 [00:12<00:12,  4.23s/it]loss=0.1851 (0.1725): :  60% 3/5 [00:12<00:08,  4.23s/it]loss=0.1718 (0.1723): :  60% 3/5 [00:16<00:08,  4.23s/it]loss=0.1718 (0.1723): :  80% 4/5 [00:16<00:04,  4.23s/it]loss=0.1644 (0.1708): :  80% 4/5 [00:21<00:04,  4.23s/it]loss=0.1644 (0.1708): : 100% 5/5 [00:21<00:00,  4.22s/it]loss=0.1644 (0.1708): : 100% 5/5 [00:21<00:00,  4.22s/it]
+PSNR = 7.682041 portrait3d_3
+++> Evaluate portrait3d_3 of epoch 0 Finished.
+[INFO] Trainer: ngp | 2025-01-24_03-16-43 | cuda:0 | fp16 | 
+/home/wcc/RodinHD/data/save_diffusion_2/render_lr
+[INFO] #parameters: 72321
+[INFO] Loading 
+/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth ...
+[INFO] loaded model.
+Loading triplane from /home/wcc/RodinHD/data/save_diffusion_2/LR/portrait3d_4.npy
+tensor(-0.8301) tensor(-0.0128)
+++> Evaluate portrait3d_4 at epoch 0 ...
+  0% 0/5 [00:00<?, ?it/s]loss=0.1080 (0.1080): :   0% 0/5 [00:03<?, ?it/s]loss=0.1080 (0.1080): :  20% 1/5 [00:03<00:15,  3.94s/it]loss=0.1025 (0.1053): :  20% 1/5 [00:07<00:15,  3.94s/it]loss=0.1025 (0.1053): :  40% 2/5 [00:07<00:12,  4.01s/it]loss=0.1146 (0.1084): :  40% 2/5 [00:12<00:12,  4.01s/it]loss=0.1146 (0.1084): :  60% 3/5 [00:12<00:08,  4.07s/it]loss=0.1010 (0.1065): :  60% 3/5 [00:16<00:08,  4.07s/it]loss=0.1010 (0.1065): :  80% 4/5 [00:16<00:04,  4.02s/it]loss=0.1068 (0.1066): :  80% 4/5 [00:20<00:04,  4.02s/it]loss=0.1068 (0.1066): : 100% 5/5 [00:20<00:00,  3.99s/it]loss=0.1068 (0.1066): : 100% 5/5 [00:20<00:00,  4.01s/it]
+PSNR = 9.727042 portrait3d_4
+++> Evaluate portrait3d_4 of epoch 0 Finished.
+[INFO] Trainer: ngp | 2025-01-24_03-17-09 | cuda:0 | fp16 | 
+/home/wcc/RodinHD/data/save_diffusion_2/render_lr
+[INFO] #parameters: 72321
+[INFO] Loading 
+/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth ...
+[INFO] loaded model.
+Loading triplane from /home/wcc/RodinHD/data/save_diffusion_2/LR/portrait3d_5.npy
+tensor(-0.8770) tensor(-0.0066)
+++> Evaluate portrait3d_5 at epoch 0 ...
+  0% 0/5 [00:00<?, ?it/s]loss=0.0324 (0.0324): :   0% 0/5 [00:03<?, ?it/s]loss=0.0324 (0.0324): :  20% 1/5 [00:03<00:14,  3.69s/it]loss=0.0407 (0.0365): :  20% 1/5 [00:07<00:14,  3.69s/it]loss=0.0407 (0.0365): :  40% 2/5 [00:07<00:11,  3.70s/it]loss=0.0362 (0.0364): :  40% 2/5 [00:11<00:11,  3.70s/it]loss=0.0362 (0.0364): :  60% 3/5 [00:11<00:07,  3.74s/it]loss=0.0409 (0.0375): :  60% 3/5 [00:14<00:07,  3.74s/it]loss=0.0409 (0.0375): :  80% 4/5 [00:14<00:03,  3.70s/it]loss=0.0471 (0.0395): :  80% 4/5 [00:18<00:03,  3.70s/it]loss=0.0471 (0.0395): : 100% 5/5 [00:18<00:00,  3.70s/it]loss=0.0471 (0.0395): : 100% 5/5 [00:18<00:00,  3.70s/it]
+PSNR = 14.073722 portrait3d_5
+++> Evaluate portrait3d_5 of epoch 0 Finished.
+[INFO] Trainer: ngp | 2025-01-24_03-17-35 | cuda:0 | fp16 | 
+/home/wcc/RodinHD/data/save_diffusion_2/render_lr
+[INFO] #parameters: 72321
+[INFO] Loading 
+/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth ...
+[INFO] loaded model.
+Loading triplane from /home/wcc/RodinHD/data/save_diffusion_2/LR/portrait3d_6.npy
+tensor(-1.) tensor(-0.0019)
+++> Evaluate portrait3d_6 at epoch 0 ...
+  0% 0/5 [00:00<?, ?it/s]loss=0.2458 (0.2458): :   0% 0/5 [00:04<?, ?it/s]loss=0.2458 (0.2458): :  20% 1/5 [00:04<00:18,  4.63s/it]loss=0.2352 (0.2405): :  20% 1/5 [00:09<00:18,  4.63s/it]loss=0.2352 (0.2405): :  40% 2/5 [00:09<00:13,  4.66s/it]loss=0.2781 (0.2530): :  40% 2/5 [00:13<00:13,  4.66s/it]loss=0.2781 (0.2530): :  60% 3/5 [00:13<00:09,  4.65s/it]loss=0.2254 (0.2461): :  60% 3/5 [00:18<00:09,  4.65s/it]loss=0.2254 (0.2461): :  80% 4/5 [00:18<00:04,  4.63s/it]loss=0.2366 (0.2442): :  80% 4/5 [00:23<00:04,  4.63s/it]loss=0.2366 (0.2442): : 100% 5/5 [00:23<00:00,  4.67s/it]loss=0.2366 (0.2442): : 100% 5/5 [00:23<00:00,  4.66s/it]
+PSNR = 6.133422 portrait3d_6
+++> Evaluate portrait3d_6 of epoch 0 Finished.
+[INFO] Trainer: ngp | 2025-01-24_03-18-05 | cuda:0 | fp16 | 
+/home/wcc/RodinHD/data/save_diffusion_2/render_lr
+[INFO] #parameters: 72321
+[INFO] Loading 
+/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth ...
+[INFO] loaded model.
+Loading triplane from /home/wcc/RodinHD/data/save_diffusion_2/LR/portrait3d_7.npy
+tensor(-0.9604) tensor(-0.0052)
+++> Evaluate portrait3d_7 at epoch 0 ...
+  0% 0/5 [00:00<?, ?it/s]loss=0.1007 (0.1007): :   0% 0/5 [00:03<?, ?it/s]loss=0.1007 (0.1007): :  20% 1/5 [00:03<00:13,  3.29s/it]loss=0.1114 (0.1061): :  20% 1/5 [00:06<00:13,  3.29s/it]loss=0.1114 (0.1061): :  40% 2/5 [00:06<00:09,  3.22s/it]loss=0.1113 (0.1078): :  40% 2/5 [00:09<00:09,  3.22s/it]loss=0.1113 (0.1078): :  60% 3/5 [00:09<00:06,  3.28s/it]loss=0.0846 (0.1020): :  60% 3/5 [00:13<00:06,  3.28s/it]loss=0.0846 (0.1020): :  80% 4/5 [00:13<00:03,  3.25s/it]loss=0.0934 (0.1003): :  80% 4/5 [00:16<00:03,  3.25s/it]loss=0.0934 (0.1003): : 100% 5/5 [00:16<00:00,  3.41s/it]loss=0.0934 (0.1003): : 100% 5/5 [00:16<00:00,  3.34s/it]
+PSNR = 10.011694 portrait3d_7
+++> Evaluate portrait3d_7 of epoch 0 Finished.
+[INFO] Trainer: ngp | 2025-01-24_03-18-28 | cuda:0 | fp16 | 
+/home/wcc/RodinHD/data/save_diffusion_2/render_lr
+[INFO] #parameters: 72321
+[INFO] Loading 
+/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth ...
+[INFO] loaded model.
+Loading triplane from /home/wcc/RodinHD/data/save_diffusion_2/LR/portrait3d_8.npy
+tensor(-0.9155) tensor(-0.0046)
+++> Evaluate portrait3d_8 at epoch 0 ...
+  0% 0/5 [00:00<?, ?it/s]loss=0.1202 (0.1202): :   0% 0/5 [00:04<?, ?it/s]loss=0.1202 (0.1202): :  20% 1/5 [00:04<00:18,  4.59s/it]loss=0.1216 (0.1209): :  20% 1/5 [00:09<00:18,  4.59s/it]loss=0.1216 (0.1209): :  40% 2/5 [00:09<00:13,  4.57s/it]loss=0.1349 (0.1256): :  40% 2/5 [00:13<00:13,  4.57s/it]loss=0.1349 (0.1256): :  60% 3/5 [00:13<00:09,  4.62s/it]loss=0.1282 (0.1262): :  60% 3/5 [00:18<00:09,  4.62s/it]loss=0.1282 (0.1262): :  80% 4/5 [00:18<00:04,  4.60s/it]loss=0.1143 (0.1238): :  80% 4/5 [00:22<00:04,  4.60s/it]loss=0.1143 (0.1238): : 100% 5/5 [00:22<00:00,  4.53s/it]loss=0.1143 (0.1238): : 100% 5/5 [00:22<00:00,  4.56s/it]
+PSNR = 9.078951 portrait3d_8
+++> Evaluate portrait3d_8 of epoch 0 Finished.
+[INFO] Trainer: ngp | 2025-01-24_03-18-58 | cuda:0 | fp16 | 
+/home/wcc/RodinHD/data/save_diffusion_2/render_lr
+[INFO] #parameters: 72321
+[INFO] Loading 
+/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth ...
+[INFO] loaded model.
+Loading triplane from /home/wcc/RodinHD/data/save_diffusion_2/LR/portrait3d_9.npy
+tensor(-0.9917) tensor(-0.0075)
+++> Evaluate portrait3d_9 at epoch 0 ...
+  0% 0/5 [00:00<?, ?it/s]loss=0.0787 (0.0787): :   0% 0/5 [00:04<?, ?it/s]loss=0.0787 (0.0787): :  20% 1/5 [00:04<00:16,  4.05s/it]loss=0.0741 (0.0764): :  20% 1/5 [00:08<00:16,  4.05s/it]loss=0.0741 (0.0764): :  40% 2/5 [00:08<00:12,  4.03s/it]loss=0.0744 (0.0758): :  40% 2/5 [00:12<00:12,  4.03s/it]loss=0.0744 (0.0758): :  60% 3/5 [00:12<00:08,  4.05s/it]loss=0.0776 (0.0762): :  60% 3/5 [00:16<00:08,  4.05s/it]loss=0.0776 (0.0762): :  80% 4/5 [00:16<00:03,  3.98s/it]loss=0.0920 (0.0794): :  80% 4/5 [00:19<00:03,  3.98s/it]loss=0.0920 (0.0794): : 100% 5/5 [00:19<00:00,  3.76s/it]loss=0.0920 (0.0794): : 100% 5/5 [00:19<00:00,  3.88s/it]
+PSNR = 11.016888 portrait3d_9
+++> Evaluate portrait3d_9 of epoch 0 Finished.
+[INFO] Trainer: ngp | 2025-01-24_03-19-24 | cuda:0 | fp16 | 
+/home/wcc/RodinHD/data/save_diffusion_2/render_lr
+[INFO] #parameters: 72321
+[INFO] Loading 
+/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth ...
+[INFO] loaded model.
+Loading triplane from /home/wcc/RodinHD/data/save_diffusion_2/LR/portrait3d_10.npy
+tensor(-1.) tensor(-0.0118)
+++> Evaluate portrait3d_10 at epoch 0 ...
+  0% 0/5 [00:00<?, ?it/s]loss=0.0729 (0.0729): :   0% 0/5 [00:03<?, ?it/s]loss=0.0729 (0.0729): :  20% 1/5 [00:03<00:12,  3.10s/it]loss=0.0727 (0.0728): :  20% 1/5 [00:06<00:12,  3.10s/it]loss=0.0727 (0.0728): :  40% 2/5 [00:06<00:09,  3.05s/it]loss=0.0767 (0.0741): :  40% 2/5 [00:08<00:09,  3.05s/it]loss=0.0767 (0.0741): :  60% 3/5 [00:08<00:05,  2.61s/it]loss=0.0791 (0.0754): :  60% 3/5 [00:11<00:05,  2.61s/it]loss=0.0791 (0.0754): :  80% 4/5 [00:11<00:03,  3.03s/it]loss=0.0698 (0.0742): :  80% 4/5 [00:15<00:03,  3.03s/it]loss=0.0698 (0.0742): : 100% 5/5 [00:15<00:00,  3.12s/it]loss=0.0698 (0.0742): : 100% 5/5 [00:15<00:00,  3.03s/it]
+PSNR = 11.297564 portrait3d_10
+++> Evaluate portrait3d_10 of epoch 0 Finished.
+Average PSNR: 9.763
+[2025-01-24 14:40:37,328] [INFO] [real_accelerator.py:203:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[93m [WARNING] [0m async_io requires the dev libaio .so object and headers but these were not found.
+[93m [WARNING] [0m async_io: please install the libaio-dev package with apt
+[93m [WARNING] [0m If libaio is already installed (perhaps from source), try setting the CFLAGS and LDFLAGS environment variables to where it can be found.
+FORCE_MEM_EFFICIENT_ATTN= 0 @UNET:QKVATTENTION
+[2025-01-24 14:40:39,391] [INFO] [comm.py:637:init_distributed] cdb=None
+Training with ch_mult:  (1, 1, 2, 3, 4)
+Predict type:  noise
+Beta schedule:  cosine_light
+logdir: /home/wcc/RodinHD/data/save_diffusion_3
+makedir dir: /home/wcc/RodinHD/data/save_diffusion_3
+Logging to /home/wcc/RodinHD/data/save_diffusion_3
+loading model from  /home/wcc/RodinHD/data/save_diffusion_3/checkpoints/model065000.pt
+Predict type:  noise
+Beta schedule:  cosine_light
+creating data loader...
+sampling...
+10
+[2025-01-24 14:40:49,186] [INFO] [real_accelerator.py:203:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2025-01-24 14:40:49,220] [INFO] [real_accelerator.py:203:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2025-01-24 14:40:49,440] [INFO] [real_accelerator.py:203:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2025-01-24 14:40:49,492] [INFO] [real_accelerator.py:203:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+sampling triplane  0
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  10%|█         | 1/10 [00:03<00:29,  3.30s/it]DDIM Sampler:  20%|██        | 2/10 [00:03<00:11,  1.48s/it]DDIM Sampler:  30%|███       | 3/10 [00:03<00:06,  1.10it/s]DDIM Sampler:  40%|████      | 4/10 [00:03<00:03,  1.57it/s]DDIM Sampler:  50%|█████     | 5/10 [00:04<00:02,  2.04it/s]DDIM Sampler:  60%|██████    | 6/10 [00:04<00:01,  2.53it/s]DDIM Sampler:  70%|███████   | 7/10 [00:04<00:01,  2.97it/s]DDIM Sampler:  80%|████████  | 8/10 [00:04<00:00,  3.30it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:05<00:00,  3.60it/s]DDIM Sampler: 100%|██████████| 10/10 [00:05<00:00,  3.88it/s]DDIM Sampler: 100%|██████████| 10/10 [00:05<00:00,  1.89it/s]
+sampling triplane  1
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  6.35it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  5.63it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  5.00it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:01,  4.85it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  4.75it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  4.53it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  4.61it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  4.55it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.55it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.78it/s]
+sampling triplane  2
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  6.47it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  5.62it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  5.09it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:01,  4.86it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  4.69it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  4.77it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  4.67it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  4.60it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.55it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.82it/s]
+sampling triplane  3
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  6.38it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  5.60it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  4.98it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:01,  4.85it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  4.76it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  4.80it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  4.57it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  4.49it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.53it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.79it/s]
+sampling triplane  4
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  6.47it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  5.65it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  5.05it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:01,  4.89it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  4.72it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  4.76it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  4.64it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  4.58it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.54it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.81it/s]
+sampling triplane  5
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  6.37it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  5.61it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  4.95it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:01,  4.87it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  4.76it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  4.81it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  4.57it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  4.58it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.45it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.77it/s]
+sampling triplane  6
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  6.46it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  5.67it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  5.14it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:01,  4.89it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  4.73it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  4.76it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  4.69it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  4.59it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.56it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.83it/s]
+sampling triplane  7
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  6.32it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  5.66it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  4.95it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:01,  4.88it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  4.75it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  4.80it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  4.57it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  4.62it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.54it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.80it/s]
+sampling triplane  8
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  6.46it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  5.66it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  5.12it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:01,  4.85it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  4.70it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  4.72it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  4.68it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  4.57it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.55it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.82it/s]
+sampling triplane  9
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  6.25it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  5.60it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  4.97it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:01,  4.88it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  4.71it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  4.77it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  4.59it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  4.58it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.52it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.79it/s]
+[93m [WARNING] [0m async_io requires the dev libaio .so object and headers but these were not found.
+[93m [WARNING] [0m async_io: please install the libaio-dev package with apt
+[93m [WARNING] [0m If libaio is already installed (perhaps from source), try setting the CFLAGS and LDFLAGS environment variables to where it can be found.
+FORCE_MEM_EFFICIENT_ATTN= 0 @UNET:QKVATTENTION
+[93m [WARNING] [0m async_io requires the dev libaio .so object and headers but these were not found.
+[93m [WARNING] [0m async_io: please install the libaio-dev package with apt
+[93m [WARNING] [0m If libaio is already installed (perhaps from source), try setting the CFLAGS and LDFLAGS environment variables to where it can be found.
+FORCE_MEM_EFFICIENT_ATTN= 0 @UNET:QKVATTENTION
+[93m [WARNING] [0m async_io requires the dev libaio .so object and headers but these were not found.
+[93m [WARNING] [0m async_io: please install the libaio-dev package with apt
+[93m [WARNING] [0m If libaio is already installed (perhaps from source), try setting the CFLAGS and LDFLAGS environment variables to where it can be found.
+FORCE_MEM_EFFICIENT_ATTN= 0 @UNET:QKVATTENTION
+[93m [WARNING] [0m async_io requires the dev libaio .so object and headers but these were not found.
+[93m [WARNING] [0m async_io: please install the libaio-dev package with apt
+[93m [WARNING] [0m If libaio is already installed (perhaps from source), try setting the CFLAGS and LDFLAGS environment variables to where it can be found.
+FORCE_MEM_EFFICIENT_ATTN= 0 @UNET:QKVATTENTION
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CudaIPCTypes.cpp:15] Producer process has been terminated before all shared CUDA tensors released. See Note [Sharing CUDA tensors]
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: invalid device ordinal (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: invalid device ordinal (function uncheckedSetDevice)
+Using /home/wcc/.cache/torch_extensions/py39_cu117 as PyTorch extensions root...
+Detected CUDA files, patching ldflags
+Emitting ninja build file /home/wcc/.cache/torch_extensions/py39_cu117/_raymarching/build.ninja...
+Building extension module _raymarching...
+Allowing ninja to set a default number of workers... (overridable by setting the environment variable MAX_JOBS=N)
+ninja: no work to do.
+Loading extension module _raymarching...
+Using /home/wcc/.cache/torch_extensions/py39_cu117 as PyTorch extensions root...
+Detected CUDA files, patching ldflags
+Emitting ninja build file /home/wcc/.cache/torch_extensions/py39_cu117/_grid_encoder/build.ninja...
+Building extension module _grid_encoder...
+Allowing ninja to set a default number of workers... (overridable by setting the environment variable MAX_JOBS=N)
+ninja: no work to do.
+Loading extension module _grid_encoder...
+Using /home/wcc/.cache/torch_extensions/py39_cu117 as PyTorch extensions root...
+Detected CUDA files, patching ldflags
+Emitting ninja build file /home/wcc/.cache/torch_extensions/py39_cu117/_freqencoder/build.ninja...
+Building extension module _freqencoder...
+Allowing ninja to set a default number of workers... (overridable by setting the environment variable MAX_JOBS=N)
+Namespace(path='/home/wcc/RodinHD/data/portrait3d_data/fitting_obj_list.txt', save_dir='/home/wcc/RodinHD/data/save_diffusion_3/LR', data_root='/home/wcc/RodinHD/data/portrait3d_data', O=True, test=True, ray_shuffle=False, no_grid=False, workspace='/home/wcc/RodinHD/data/save_diffusion_3/render_lr', seed=0, dataset='portrait3d', finetune=False, iters=15000, lr0=0.02, lr1=0.0, ckpt='/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth', num_rays=8192, cuda_ray=True, max_steps=1024, num_steps=512, update_extra_interval=16, upsample_steps=0, max_ray_batch=8192, l1_reg_weight=0.0001, tv_weight=0.02, dist_weight=0.002, iwc_weight=0.1, patch_size=1, fp16=True, cp=False, triplane_channels=32, downscale=1, resolution0=512, resolution1=512, upsample_model_steps=[], grid_size=256, color_space='srgb', preload=False, bound=1.0, scale=0.8, offset=[0, 0, 0], dt_gamma=0.0, min_near=0.2, density_thresh=10, bg_radius=-1, gui=False, W=1920, H=1080, radius=5, fovy=50, max_spp=64, num_train_frames=300, out_loop_eps=1, eval_freq=10, no_tqdm=False, random_noise=False, random_scale=False, error_map=False, clip_text='', rand_pose=-1, start_idx=0, end_idx=10, eval_video=False)
+Comm size: 1, Rank: 0
+setup done.
+Render using grid size:  256
+ninja: no work to do.
+Loading extension module _freqencoder...
+NeRFNetwork(
+  (grid_sample): GridEncoder: input_dim=2 num_levels=3 level_dim=32 resolution=512 -> 512 per_level_scale=1.0000 gridtype=tiled align_corners=True interpolation=linear
+  (encoder): FreqEncoder: input_dim=24 degree=2 output_dim=120
+  (encoder_sigma): FreqEncoder: input_dim=8 degree=2 output_dim=40
+  (encoder_dir): FreqEncoder: input_dim=3 degree=2 output_dim=15
+  (color_net): ModuleList(
+    (0): Linear(in_features=263, out_features=128, bias=False)
+    (1): Linear(in_features=128, out_features=128, bias=False)
+    (2): Linear(in_features=128, out_features=3, bias=False)
+  )
+  (sigma_net): Sequential(
+    (0): Linear(in_features=40, out_features=128, bias=True)
+    (1): Softplus(beta=1, threshold=20)
+    (2): Linear(in_features=128, out_features=129, bias=True)
+  )
+)
+[INFO] Trainer: ngp | 2025-01-24_14-41-23 | cuda:0 | fp16 | 
+/home/wcc/RodinHD/data/save_diffusion_3/render_lr
+[INFO] #parameters: 72321
+[INFO] Loading 
+/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth ...
+[INFO] loaded model.
+Loading triplane from /home/wcc/RodinHD/data/save_diffusion_3/LR/portrait3d_1.npy
+tensor(-1.) tensor(-0.0134)
+++> Evaluate portrait3d_1 at epoch 0 ...
+  0% 0/5 [00:00<?, ?it/s]loss=0.0074 (0.0074): :   0% 0/5 [00:02<?, ?it/s]loss=0.0074 (0.0074): :  20% 1/5 [00:02<00:09,  2.46s/it]loss=0.0074 (0.0074): :  20% 1/5 [00:04<00:09,  2.46s/it]loss=0.0074 (0.0074): :  40% 2/5 [00:04<00:07,  2.40s/it]loss=0.0073 (0.0074): :  40% 2/5 [00:07<00:07,  2.40s/it]loss=0.0073 (0.0074): :  60% 3/5 [00:07<00:04,  2.44s/it]loss=0.0072 (0.0073): :  60% 3/5 [00:09<00:04,  2.44s/it]loss=0.0072 (0.0073): :  80% 4/5 [00:09<00:02,  2.29s/it]loss=0.0074 (0.0074): :  80% 4/5 [00:11<00:02,  2.29s/it]loss=0.0074 (0.0074): : 100% 5/5 [00:11<00:00,  2.15s/it]loss=0.0074 (0.0074): : 100% 5/5 [00:11<00:00,  2.26s/it]
+PSNR = 21.331488 portrait3d_1
+++> Evaluate portrait3d_1 of epoch 0 Finished.
+[INFO] Trainer: ngp | 2025-01-24_14-41-44 | cuda:0 | fp16 | 
+/home/wcc/RodinHD/data/save_diffusion_3/render_lr
+[INFO] #parameters: 72321
+[INFO] Loading 
+/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth ...
+[INFO] loaded model.
+Loading triplane from /home/wcc/RodinHD/data/save_diffusion_3/LR/portrait3d_2.npy
+tensor(-1.) tensor(-0.0051)
+++> Evaluate portrait3d_2 at epoch 0 ...
+  0% 0/5 [00:00<?, ?it/s]loss=0.0101 (0.0101): :   0% 0/5 [00:02<?, ?it/s]loss=0.0101 (0.0101): :  20% 1/5 [00:02<00:09,  2.44s/it]loss=0.0119 (0.0110): :  20% 1/5 [00:05<00:09,  2.44s/it]loss=0.0119 (0.0110): :  40% 2/5 [00:05<00:07,  2.55s/it]loss=0.0113 (0.0111): :  40% 2/5 [00:08<00:07,  2.55s/it]loss=0.0113 (0.0111): :  60% 3/5 [00:08<00:05,  2.79s/it]loss=0.0107 (0.0110): :  60% 3/5 [00:11<00:05,  2.79s/it]loss=0.0107 (0.0110): :  80% 4/5 [00:11<00:02,  2.87s/it]loss=0.0101 (0.0108): :  80% 4/5 [00:14<00:02,  2.87s/it]loss=0.0101 (0.0108): : 100% 5/5 [00:14<00:00,  2.90s/it]loss=0.0101 (0.0108): : 100% 5/5 [00:14<00:00,  2.82s/it]
+PSNR = 19.656605 portrait3d_2
+++> Evaluate portrait3d_2 of epoch 0 Finished.
+[INFO] Trainer: ngp | 2025-01-24_14-42-04 | cuda:0 | fp16 | 
+/home/wcc/RodinHD/data/save_diffusion_3/render_lr
+[INFO] #parameters: 72321
+[INFO] Loading 
+/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth ...
+[INFO] loaded model.
+Loading triplane from /home/wcc/RodinHD/data/save_diffusion_3/LR/portrait3d_3.npy
+tensor(-0.9517) tensor(-0.0146)
+++> Evaluate portrait3d_3 at epoch 0 ...
+  0% 0/5 [00:00<?, ?it/s]loss=0.0106 (0.0106): :   0% 0/5 [00:03<?, ?it/s]loss=0.0106 (0.0106): :  20% 1/5 [00:03<00:13,  3.48s/it]loss=0.0114 (0.0110): :  20% 1/5 [00:06<00:13,  3.48s/it]loss=0.0114 (0.0110): :  40% 2/5 [00:06<00:10,  3.47s/it]loss=0.0113 (0.0111): :  40% 2/5 [00:10<00:10,  3.47s/it]loss=0.0113 (0.0111): :  60% 3/5 [00:10<00:07,  3.51s/it]loss=0.0103 (0.0109): :  60% 3/5 [00:13<00:07,  3.51s/it]loss=0.0103 (0.0109): :  80% 4/5 [00:13<00:03,  3.47s/it]loss=0.0104 (0.0108): :  80% 4/5 [00:17<00:03,  3.47s/it]loss=0.0104 (0.0108): : 100% 5/5 [00:17<00:00,  3.46s/it]loss=0.0104 (0.0108): : 100% 5/5 [00:17<00:00,  3.47s/it]
+PSNR = 19.664004 portrait3d_3
+++> Evaluate portrait3d_3 of epoch 0 Finished.
+[INFO] Trainer: ngp | 2025-01-24_14-42-28 | cuda:0 | fp16 | 
+/home/wcc/RodinHD/data/save_diffusion_3/render_lr
+[INFO] #parameters: 72321
+[INFO] Loading 
+/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth ...
+[INFO] loaded model.
+Loading triplane from /home/wcc/RodinHD/data/save_diffusion_3/LR/portrait3d_4.npy
+tensor(-0.8926) tensor(-0.0069)
+++> Evaluate portrait3d_4 at epoch 0 ...
+  0% 0/5 [00:00<?, ?it/s]loss=0.0649 (0.0649): :   0% 0/5 [00:04<?, ?it/s]loss=0.0649 (0.0649): :  20% 1/5 [00:04<00:18,  4.71s/it]loss=0.0555 (0.0602): :  20% 1/5 [00:09<00:18,  4.71s/it]loss=0.0555 (0.0602): :  40% 2/5 [00:09<00:14,  4.74s/it]loss=0.0602 (0.0602): :  40% 2/5 [00:14<00:14,  4.74s/it]loss=0.0602 (0.0602): :  60% 3/5 [00:14<00:09,  4.75s/it]loss=0.0565 (0.0593): :  60% 3/5 [00:18<00:09,  4.75s/it]loss=0.0565 (0.0593): :  80% 4/5 [00:18<00:04,  4.75s/it]loss=0.0401 (0.0554): :  80% 4/5 [00:23<00:04,  4.75s/it]loss=0.0401 (0.0554): : 100% 5/5 [00:23<00:00,  4.64s/it]loss=0.0401 (0.0554): : 100% 5/5 [00:23<00:00,  4.68s/it]
+PSNR = 12.617000 portrait3d_4
+++> Evaluate portrait3d_4 of epoch 0 Finished.
+[INFO] Trainer: ngp | 2025-01-24_14-42-58 | cuda:0 | fp16 | 
+/home/wcc/RodinHD/data/save_diffusion_3/render_lr
+[INFO] #parameters: 72321
+[INFO] Loading 
+/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth ...
+[INFO] loaded model.
+Loading triplane from /home/wcc/RodinHD/data/save_diffusion_3/LR/portrait3d_5.npy
+tensor(-0.8330) tensor(-0.0104)
+++> Evaluate portrait3d_5 at epoch 0 ...
+  0% 0/5 [00:00<?, ?it/s]loss=0.0301 (0.0301): :   0% 0/5 [00:03<?, ?it/s]loss=0.0301 (0.0301): :  20% 1/5 [00:03<00:12,  3.06s/it]loss=0.0362 (0.0332): :  20% 1/5 [00:06<00:12,  3.06s/it]loss=0.0362 (0.0332): :  40% 2/5 [00:06<00:09,  3.04s/it]loss=0.0328 (0.0330): :  40% 2/5 [00:08<00:09,  3.04s/it]loss=0.0328 (0.0330): :  60% 3/5 [00:08<00:05,  2.81s/it]loss=0.0399 (0.0348): :  60% 3/5 [00:11<00:05,  2.81s/it]loss=0.0399 (0.0348): :  80% 4/5 [00:11<00:02,  2.71s/it]loss=0.0466 (0.0371): :  80% 4/5 [00:14<00:02,  2.71s/it]loss=0.0466 (0.0371): : 100% 5/5 [00:14<00:00,  3.02s/it]loss=0.0466 (0.0371): : 100% 5/5 [00:14<00:00,  2.95s/it]
+PSNR = 14.355909 portrait3d_5
+++> Evaluate portrait3d_5 of epoch 0 Finished.
+[INFO] Trainer: ngp | 2025-01-24_14-43-18 | cuda:0 | fp16 | 
+/home/wcc/RodinHD/data/save_diffusion_3/render_lr
+[INFO] #parameters: 72321
+[INFO] Loading 
+/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth ...
+[INFO] loaded model.
+Loading triplane from /home/wcc/RodinHD/data/save_diffusion_3/LR/portrait3d_6.npy
+tensor(-0.9443) tensor(-0.0084)
+++> Evaluate portrait3d_6 at epoch 0 ...
+  0% 0/5 [00:00<?, ?it/s]loss=0.0167 (0.0167): :   0% 0/5 [00:02<?, ?it/s]loss=0.0167 (0.0167): :  20% 1/5 [00:02<00:09,  2.39s/it]loss=0.0157 (0.0162): :  20% 1/5 [00:04<00:09,  2.39s/it]loss=0.0157 (0.0162): :  40% 2/5 [00:04<00:07,  2.40s/it]loss=0.0165 (0.0163): :  40% 2/5 [00:07<00:07,  2.40s/it]loss=0.0165 (0.0163): :  60% 3/5 [00:07<00:04,  2.45s/it]loss=0.0174 (0.0166): :  60% 3/5 [00:09<00:04,  2.45s/it]loss=0.0174 (0.0166): :  80% 4/5 [00:09<00:02,  2.44s/it]loss=0.0149 (0.0162): :  80% 4/5 [00:12<00:02,  2.44s/it]loss=0.0149 (0.0162): : 100% 5/5 [00:12<00:00,  2.42s/it]loss=0.0149 (0.0162): : 100% 5/5 [00:12<00:00,  2.42s/it]
+PSNR = 17.902126 portrait3d_6
+++> Evaluate portrait3d_6 of epoch 0 Finished.
+[INFO] Trainer: ngp | 2025-01-24_14-43-37 | cuda:0 | fp16 | 
+/home/wcc/RodinHD/data/save_diffusion_3/render_lr
+[INFO] #parameters: 72321
+[INFO] Loading 
+/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth ...
+[INFO] loaded model.
+Loading triplane from /home/wcc/RodinHD/data/save_diffusion_3/LR/portrait3d_7.npy
+tensor(-1.) tensor(-0.0053)
+++> Evaluate portrait3d_7 at epoch 0 ...
+  0% 0/5 [00:00<?, ?it/s]loss=0.0971 (0.0971): :   0% 0/5 [00:04<?, ?it/s]loss=0.0971 (0.0971): :  20% 1/5 [00:04<00:16,  4.22s/it]loss=0.1035 (0.1003): :  20% 1/5 [00:08<00:16,  4.22s/it]loss=0.1035 (0.1003): :  40% 2/5 [00:08<00:12,  4.22s/it]loss=0.0821 (0.0942): :  40% 2/5 [00:12<00:12,  4.22s/it]loss=0.0821 (0.0942): :  60% 3/5 [00:12<00:08,  4.24s/it]loss=0.1084 (0.0978): :  60% 3/5 [00:16<00:08,  4.24s/it]loss=0.1084 (0.0978): :  80% 4/5 [00:16<00:04,  4.24s/it]loss=0.0743 (0.0931): :  80% 4/5 [00:21<00:04,  4.24s/it]loss=0.0743 (0.0931): : 100% 5/5 [00:21<00:00,  4.18s/it]loss=0.0743 (0.0931): : 100% 5/5 [00:21<00:00,  4.21s/it]
+PSNR = 10.355595 portrait3d_7
+++> Evaluate portrait3d_7 of epoch 0 Finished.
+[INFO] Trainer: ngp | 2025-01-24_14-44-05 | cuda:0 | fp16 | 
+/home/wcc/RodinHD/data/save_diffusion_3/render_lr
+[INFO] #parameters: 72321
+[INFO] Loading 
+/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth ...
+[INFO] loaded model.
+Loading triplane from /home/wcc/RodinHD/data/save_diffusion_3/LR/portrait3d_8.npy
+tensor(-0.9526) tensor(-0.0083)
+++> Evaluate portrait3d_8 at epoch 0 ...
+  0% 0/5 [00:00<?, ?it/s]loss=0.0127 (0.0127): :   0% 0/5 [00:03<?, ?it/s]loss=0.0127 (0.0127): :  20% 1/5 [00:03<00:12,  3.24s/it]loss=0.0123 (0.0125): :  20% 1/5 [00:06<00:12,  3.24s/it]loss=0.0123 (0.0125): :  40% 2/5 [00:06<00:09,  3.18s/it]loss=0.0131 (0.0127): :  40% 2/5 [00:09<00:09,  3.18s/it]loss=0.0131 (0.0127): :  60% 3/5 [00:09<00:06,  3.19s/it]loss=0.0128 (0.0127): :  60% 3/5 [00:12<00:06,  3.19s/it]loss=0.0128 (0.0127): :  80% 4/5 [00:12<00:03,  3.16s/it]loss=0.0115 (0.0125): :  80% 4/5 [00:16<00:03,  3.16s/it]loss=0.0115 (0.0125): : 100% 5/5 [00:16<00:00,  3.22s/it]loss=0.0115 (0.0125): : 100% 5/5 [00:16<00:00,  3.21s/it]
+PSNR = 19.043678 portrait3d_8
+++> Evaluate portrait3d_8 of epoch 0 Finished.
+[INFO] Trainer: ngp | 2025-01-24_14-44-27 | cuda:0 | fp16 | 
+/home/wcc/RodinHD/data/save_diffusion_3/render_lr
+[INFO] #parameters: 72321
+[INFO] Loading 
+/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth ...
+[INFO] loaded model.
+Loading triplane from /home/wcc/RodinHD/data/save_diffusion_3/LR/portrait3d_9.npy
+tensor(-0.9971) tensor(-0.0158)
+++> Evaluate portrait3d_9 at epoch 0 ...
+  0% 0/5 [00:00<?, ?it/s]loss=0.0209 (0.0209): :   0% 0/5 [00:03<?, ?it/s]loss=0.0209 (0.0209): :  20% 1/5 [00:03<00:14,  3.62s/it]loss=0.0187 (0.0198): :  20% 1/5 [00:07<00:14,  3.62s/it]loss=0.0187 (0.0198): :  40% 2/5 [00:07<00:10,  3.56s/it]loss=0.0208 (0.0201): :  40% 2/5 [00:10<00:10,  3.56s/it]loss=0.0208 (0.0201): :  60% 3/5 [00:10<00:07,  3.55s/it]loss=0.0208 (0.0203): :  60% 3/5 [00:14<00:07,  3.55s/it]loss=0.0208 (0.0203): :  80% 4/5 [00:14<00:03,  3.57s/it]loss=0.0219 (0.0206): :  80% 4/5 [00:17<00:03,  3.57s/it]loss=0.0219 (0.0206): : 100% 5/5 [00:17<00:00,  3.54s/it]loss=0.0219 (0.0206): : 100% 5/5 [00:17<00:00,  3.55s/it]
+PSNR = 16.862181 portrait3d_9
+++> Evaluate portrait3d_9 of epoch 0 Finished.
+[INFO] Trainer: ngp | 2025-01-24_14-44-52 | cuda:0 | fp16 | 
+/home/wcc/RodinHD/data/save_diffusion_3/render_lr
+[INFO] #parameters: 72321
+[INFO] Loading 
+/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth ...
+[INFO] loaded model.
+Loading triplane from /home/wcc/RodinHD/data/save_diffusion_3/LR/portrait3d_10.npy
+tensor(-0.9072) tensor(-0.0137)
+++> Evaluate portrait3d_10 at epoch 0 ...
+  0% 0/5 [00:00<?, ?it/s]loss=0.0358 (0.0358): :   0% 0/5 [00:04<?, ?it/s]loss=0.0358 (0.0358): :  20% 1/5 [00:04<00:17,  4.33s/it]loss=0.0452 (0.0405): :  20% 1/5 [00:08<00:17,  4.33s/it]loss=0.0452 (0.0405): :  40% 2/5 [00:08<00:12,  4.26s/it]loss=0.0384 (0.0398): :  40% 2/5 [00:12<00:12,  4.26s/it]loss=0.0384 (0.0398): :  60% 3/5 [00:12<00:08,  4.31s/it]loss=0.0373 (0.0392): :  60% 3/5 [00:17<00:08,  4.31s/it]loss=0.0373 (0.0392): :  80% 4/5 [00:17<00:04,  4.29s/it]loss=0.0356 (0.0384): :  80% 4/5 [00:21<00:04,  4.29s/it]loss=0.0356 (0.0384): : 100% 5/5 [00:21<00:00,  4.23s/it]loss=0.0356 (0.0384): : 100% 5/5 [00:21<00:00,  4.26s/it]
+PSNR = 14.168623 portrait3d_10
+++> Evaluate portrait3d_10 of epoch 0 Finished.
+Average PSNR: 16.596
+[2025-01-24 21:16:48,789] [INFO] [real_accelerator.py:203:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[93m [WARNING] [0m async_io requires the dev libaio .so object and headers but these were not found.
+[93m [WARNING] [0m async_io: please install the libaio-dev package with apt
+[93m [WARNING] [0m If libaio is already installed (perhaps from source), try setting the CFLAGS and LDFLAGS environment variables to where it can be found.
+FORCE_MEM_EFFICIENT_ATTN= 0 @UNET:QKVATTENTION
+[2025-01-24 21:16:50,890] [INFO] [comm.py:637:init_distributed] cdb=None
+Training with ch_mult:  (1, 1, 2, 3, 4)
+Predict type:  noise
+Beta schedule:  cosine_light
+logdir: /home/wcc/RodinHD/data/save_diffusion_3
+makedir dir: /home/wcc/RodinHD/data/save_diffusion_3
+Logging to /home/wcc/RodinHD/data/save_diffusion_3
+loading model from  /home/wcc/RodinHD/data/save_diffusion_3/checkpoints/model100000.pt
+Predict type:  noise
+Beta schedule:  cosine_light
+creating data loader...
+sampling...
+10
+[2025-01-24 21:16:59,932] [INFO] [real_accelerator.py:203:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2025-01-24 21:16:59,940] [INFO] [real_accelerator.py:203:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2025-01-24 21:16:59,957] [INFO] [real_accelerator.py:203:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2025-01-24 21:16:59,971] [INFO] [real_accelerator.py:203:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+sampling triplane  0
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  10%|█         | 1/10 [00:03<00:27,  3.11s/it]DDIM Sampler:  20%|██        | 2/10 [00:03<00:11,  1.40s/it]DDIM Sampler:  30%|███       | 3/10 [00:03<00:06,  1.15it/s]DDIM Sampler:  40%|████      | 4/10 [00:03<00:03,  1.62it/s]DDIM Sampler:  50%|█████     | 5/10 [00:03<00:02,  2.12it/s]DDIM Sampler:  60%|██████    | 6/10 [00:04<00:01,  2.58it/s]DDIM Sampler:  70%|███████   | 7/10 [00:04<00:01,  2.98it/s]DDIM Sampler:  80%|████████  | 8/10 [00:04<00:00,  3.31it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:04<00:00,  3.66it/s]DDIM Sampler: 100%|██████████| 10/10 [00:05<00:00,  3.82it/s]DDIM Sampler: 100%|██████████| 10/10 [00:05<00:00,  1.95it/s]
+sampling triplane  1
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  6.45it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  5.55it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  5.11it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:01,  4.80it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  4.65it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  4.67it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  4.55it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  4.52it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.40it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.72it/s]
+sampling triplane  2
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  6.41it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  5.60it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  4.95it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:01,  4.83it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  4.67it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  4.74it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  4.50it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  4.51it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.53it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.76it/s]
+sampling triplane  3
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  6.33it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  5.47it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  4.97it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:01,  4.74it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  4.76it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  4.61it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  4.59it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  4.52it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.62it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.79it/s]
+sampling triplane  4
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  6.36it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  5.28it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  4.91it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:01,  4.90it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  4.70it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  4.66it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  4.57it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  4.67it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.47it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.74it/s]
+sampling triplane  5
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  6.50it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  5.60it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  5.13it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:01,  4.85it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  4.68it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  4.72it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  4.58it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  4.57it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.51it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.79it/s]
+sampling triplane  6
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  6.45it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  5.22it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  5.02it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:01,  4.81it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  4.68it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  4.59it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  4.68it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  4.50it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.54it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.75it/s]
+sampling triplane  7
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  10%|█         | 1/10 [00:00<00:00,  9.72it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  5.99it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  5.17it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  4.87it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:01,  4.70it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  4.74it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  4.53it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  4.56it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  4.53it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.62it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.80it/s]
+sampling triplane  8
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  10%|█         | 1/10 [00:00<00:00,  9.49it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  6.13it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  4.97it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  4.83it/s]DDIM Sampler:  50%|█████     | 5/10 [00:01<00:01,  4.63it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  4.56it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  4.65it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  4.42it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  4.49it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.49it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.71it/s]
+sampling triplane  9
+Running DDIM Sampling with 10 timesteps
+DDIM Sampler:   0%|          | 0/10 [00:00<?, ?it/s]DDIM Sampler:  20%|██        | 2/10 [00:00<00:01,  6.37it/s]DDIM Sampler:  30%|███       | 3/10 [00:00<00:01,  5.48it/s]DDIM Sampler:  40%|████      | 4/10 [00:00<00:01,  4.96it/s]DDIM Sampler:  50%|█████     | 5/10 [00:00<00:01,  4.75it/s]DDIM Sampler:  60%|██████    | 6/10 [00:01<00:00,  4.77it/s]DDIM Sampler:  70%|███████   | 7/10 [00:01<00:00,  4.64it/s]DDIM Sampler:  80%|████████  | 8/10 [00:01<00:00,  4.56it/s]DDIM Sampler:  90%|█████████ | 9/10 [00:01<00:00,  4.52it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.60it/s]DDIM Sampler: 100%|██████████| 10/10 [00:02<00:00,  4.78it/s]
+[93m [WARNING] [0m async_io requires the dev libaio .so object and headers but these were not found.
+[93m [WARNING] [0m async_io: please install the libaio-dev package with apt
+[93m [WARNING] [0m If libaio is already installed (perhaps from source), try setting the CFLAGS and LDFLAGS environment variables to where it can be found.
+FORCE_MEM_EFFICIENT_ATTN= 0 @UNET:QKVATTENTION
+[93m [WARNING] [0m async_io requires the dev libaio .so object and headers but these were not found.
+[93m [WARNING] [0m async_io: please install the libaio-dev package with apt
+[93m [WARNING] [0m If libaio is already installed (perhaps from source), try setting the CFLAGS and LDFLAGS environment variables to where it can be found.
+FORCE_MEM_EFFICIENT_ATTN= 0 @UNET:QKVATTENTION
+[93m [WARNING] [0m async_io requires the dev libaio .so object and headers but these were not found.
+[93m [WARNING] [0m async_io: please install the libaio-dev package with apt
+[93m [WARNING] [0m If libaio is already installed (perhaps from source), try setting the CFLAGS and LDFLAGS environment variables to where it can be found.
+FORCE_MEM_EFFICIENT_ATTN= 0 @UNET:QKVATTENTION
+[93m [WARNING] [0m async_io requires the dev libaio .so object and headers but these were not found.
+[93m [WARNING] [0m async_io: please install the libaio-dev package with apt
+[93m [WARNING] [0m If libaio is already installed (perhaps from source), try setting the CFLAGS and LDFLAGS environment variables to where it can be found.
+FORCE_MEM_EFFICIENT_ATTN= 0 @UNET:QKVATTENTION
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CudaIPCTypes.cpp:15] Producer process has been terminated before all shared CUDA tensors released. See Note [Sharing CUDA tensors]
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: invalid device ordinal (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: invalid device ordinal (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+[W CUDAGuardImpl.h:46] Warning: CUDA warning: driver shutting down (function uncheckedGetDevice)
+[W CUDAGuardImpl.h:62] Warning: CUDA warning: driver shutting down (function uncheckedSetDevice)
+Using /home/wcc/.cache/torch_extensions/py39_cu117 as PyTorch extensions root...
+Detected CUDA files, patching ldflags
+Emitting ninja build file /home/wcc/.cache/torch_extensions/py39_cu117/_raymarching/build.ninja...
+Building extension module _raymarching...
+Allowing ninja to set a default number of workers... (overridable by setting the environment variable MAX_JOBS=N)
+ninja: no work to do.
+Loading extension module _raymarching...
+Using /home/wcc/.cache/torch_extensions/py39_cu117 as PyTorch extensions root...
+Detected CUDA files, patching ldflags
+Emitting ninja build file /home/wcc/.cache/torch_extensions/py39_cu117/_grid_encoder/build.ninja...
+Building extension module _grid_encoder...
+Allowing ninja to set a default number of workers... (overridable by setting the environment variable MAX_JOBS=N)
+ninja: no work to do.
+Loading extension module _grid_encoder...
+Using /home/wcc/.cache/torch_extensions/py39_cu117 as PyTorch extensions root...
+Detected CUDA files, patching ldflags
+Emitting ninja build file /home/wcc/.cache/torch_extensions/py39_cu117/_freqencoder/build.ninja...
+Building extension module _freqencoder...
+Allowing ninja to set a default number of workers... (overridable by setting the environment variable MAX_JOBS=N)
+Namespace(path='/home/wcc/RodinHD/data/portrait3d_data/fitting_obj_list.txt', save_dir='/home/wcc/RodinHD/data/save_diffusion_3/LR', data_root='/home/wcc/RodinHD/data/portrait3d_data', O=True, test=True, ray_shuffle=False, no_grid=False, workspace='/home/wcc/RodinHD/data/save_diffusion_3/render_lr', seed=0, dataset='portrait3d', finetune=False, iters=15000, lr0=0.02, lr1=0.0, ckpt='/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth', num_rays=8192, cuda_ray=True, max_steps=1024, num_steps=512, update_extra_interval=16, upsample_steps=0, max_ray_batch=8192, l1_reg_weight=0.0001, tv_weight=0.02, dist_weight=0.002, iwc_weight=0.1, patch_size=1, fp16=True, cp=False, triplane_channels=32, downscale=1, resolution0=512, resolution1=512, upsample_model_steps=[], grid_size=256, color_space='srgb', preload=False, bound=1.0, scale=0.8, offset=[0, 0, 0], dt_gamma=0.0, min_near=0.2, density_thresh=10, bg_radius=-1, gui=False, W=1920, H=1080, radius=5, fovy=50, max_spp=64, num_train_frames=300, out_loop_eps=1, eval_freq=10, no_tqdm=False, random_noise=False, random_scale=False, error_map=False, clip_text='', rand_pose=-1, start_idx=0, end_idx=10, eval_video=False)
+Comm size: 1, Rank: 0
+setup done.
+Render using grid size:  256
+ninja: no work to do.
+Loading extension module _freqencoder...
+NeRFNetwork(
+  (grid_sample): GridEncoder: input_dim=2 num_levels=3 level_dim=32 resolution=512 -> 512 per_level_scale=1.0000 gridtype=tiled align_corners=True interpolation=linear
+  (encoder): FreqEncoder: input_dim=24 degree=2 output_dim=120
+  (encoder_sigma): FreqEncoder: input_dim=8 degree=2 output_dim=40
+  (encoder_dir): FreqEncoder: input_dim=3 degree=2 output_dim=15
+  (color_net): ModuleList(
+    (0): Linear(in_features=263, out_features=128, bias=False)
+    (1): Linear(in_features=128, out_features=128, bias=False)
+    (2): Linear(in_features=128, out_features=3, bias=False)
+  )
+  (sigma_net): Sequential(
+    (0): Linear(in_features=40, out_features=128, bias=True)
+    (1): Softplus(beta=1, threshold=20)
+    (2): Linear(in_features=128, out_features=129, bias=True)
+  )
+)
+[INFO] Trainer: ngp | 2025-01-24_21-17-34 | cuda:0 | fp16 | 
+/home/wcc/RodinHD/data/save_diffusion_3/render_lr
+[INFO] #parameters: 72321
+[INFO] Loading 
+/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth ...
+[INFO] loaded model.
+Loading triplane from /home/wcc/RodinHD/data/save_diffusion_3/LR/portrait3d_1.npy
+tensor(-0.9546) tensor(-0.0061)
+++> Evaluate portrait3d_1 at epoch 0 ...
+  0% 0/5 [00:00<?, ?it/s]loss=0.0085 (0.0085): :   0% 0/5 [00:03<?, ?it/s]loss=0.0085 (0.0085): :  20% 1/5 [00:03<00:15,  3.99s/it]loss=0.0089 (0.0087): :  20% 1/5 [00:08<00:15,  3.99s/it]loss=0.0089 (0.0087): :  40% 2/5 [00:08<00:12,  4.01s/it]loss=0.0082 (0.0085): :  40% 2/5 [00:12<00:12,  4.01s/it]loss=0.0082 (0.0085): :  60% 3/5 [00:12<00:08,  4.08s/it]loss=0.0075 (0.0083): :  60% 3/5 [00:16<00:08,  4.08s/it]loss=0.0075 (0.0083): :  80% 4/5 [00:16<00:03,  3.98s/it]loss=0.0062 (0.0079): :  80% 4/5 [00:20<00:03,  3.98s/it]loss=0.0062 (0.0079): : 100% 5/5 [00:20<00:00,  4.07s/it]loss=0.0062 (0.0079): : 100% 5/5 [00:20<00:00,  4.05s/it]
+PSNR = 21.082857 portrait3d_1
+++> Evaluate portrait3d_1 of epoch 0 Finished.
+[INFO] Trainer: ngp | 2025-01-24_21-18-04 | cuda:0 | fp16 | 
+/home/wcc/RodinHD/data/save_diffusion_3/render_lr
+[INFO] #parameters: 72321
+[INFO] Loading 
+/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth ...
+[INFO] loaded model.
+Loading triplane from /home/wcc/RodinHD/data/save_diffusion_3/LR/portrait3d_2.npy
+tensor(-1.) tensor(-0.0077)
+++> Evaluate portrait3d_2 at epoch 0 ...
+  0% 0/5 [00:00<?, ?it/s]loss=0.0105 (0.0105): :   0% 0/5 [00:02<?, ?it/s]loss=0.0105 (0.0105): :  20% 1/5 [00:02<00:11,  2.84s/it]loss=0.0091 (0.0098): :  20% 1/5 [00:05<00:11,  2.84s/it]loss=0.0091 (0.0098): :  40% 2/5 [00:05<00:07,  2.65s/it]loss=0.0108 (0.0102): :  40% 2/5 [00:07<00:07,  2.65s/it]loss=0.0108 (0.0102): :  60% 3/5 [00:07<00:05,  2.64s/it]loss=0.0099 (0.0101): :  60% 3/5 [00:10<00:05,  2.64s/it]loss=0.0099 (0.0101): :  80% 4/5 [00:10<00:02,  2.61s/it]loss=0.0092 (0.0099): :  80% 4/5 [00:13<00:02,  2.61s/it]loss=0.0092 (0.0099): : 100% 5/5 [00:13<00:00,  2.58s/it]loss=0.0092 (0.0099): : 100% 5/5 [00:13<00:00,  2.62s/it]
+PSNR = 20.048676 portrait3d_2
+++> Evaluate portrait3d_2 of epoch 0 Finished.
+[INFO] Trainer: ngp | 2025-01-24_21-18-24 | cuda:0 | fp16 | 
+/home/wcc/RodinHD/data/save_diffusion_3/render_lr
+[INFO] #parameters: 72321
+[INFO] Loading 
+/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth ...
+[INFO] loaded model.
+Loading triplane from /home/wcc/RodinHD/data/save_diffusion_3/LR/portrait3d_3.npy
+tensor(-0.9678) tensor(-0.0086)
+++> Evaluate portrait3d_3 at epoch 0 ...
+  0% 0/5 [00:00<?, ?it/s]loss=0.0077 (0.0077): :   0% 0/5 [00:04<?, ?it/s]loss=0.0077 (0.0077): :  20% 1/5 [00:04<00:19,  4.93s/it]loss=0.0089 (0.0083): :  20% 1/5 [00:09<00:19,  4.93s/it]loss=0.0089 (0.0083): :  40% 2/5 [00:09<00:14,  4.81s/it]loss=0.0086 (0.0084): :  40% 2/5 [00:14<00:14,  4.81s/it]loss=0.0086 (0.0084): :  60% 3/5 [00:14<00:09,  4.92s/it]loss=0.0076 (0.0082): :  60% 3/5 [00:19<00:09,  4.92s/it]loss=0.0076 (0.0082): :  80% 4/5 [00:19<00:04,  4.82s/it]loss=0.0084 (0.0082): :  80% 4/5 [00:24<00:04,  4.82s/it]loss=0.0084 (0.0082): : 100% 5/5 [00:24<00:00,  4.78s/it]loss=0.0084 (0.0082): : 100% 5/5 [00:24<00:00,  4.82s/it]
+PSNR = 20.848626 portrait3d_3
+++> Evaluate portrait3d_3 of epoch 0 Finished.
+[INFO] Trainer: ngp | 2025-01-24_21-18-55 | cuda:0 | fp16 | 
+/home/wcc/RodinHD/data/save_diffusion_3/render_lr
+[INFO] #parameters: 72321
+[INFO] Loading 
+/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth ...
+[INFO] loaded model.
+Loading triplane from /home/wcc/RodinHD/data/save_diffusion_3/LR/portrait3d_4.npy
+tensor(-0.9321) tensor(-0.0191)
+++> Evaluate portrait3d_4 at epoch 0 ...
+  0% 0/5 [00:00<?, ?it/s]loss=0.0106 (0.0106): :   0% 0/5 [00:02<?, ?it/s]loss=0.0106 (0.0106): :  20% 1/5 [00:02<00:11,  2.95s/it]loss=0.0105 (0.0105): :  20% 1/5 [00:05<00:11,  2.95s/it]loss=0.0105 (0.0105): :  40% 2/5 [00:05<00:08,  2.88s/it]loss=0.0119 (0.0110): :  40% 2/5 [00:08<00:08,  2.88s/it]loss=0.0119 (0.0110): :  60% 3/5 [00:08<00:05,  2.94s/it]loss=0.0109 (0.0110): :  60% 3/5 [00:11<00:05,  2.94s/it]loss=0.0109 (0.0110): :  80% 4/5 [00:11<00:02,  2.88s/it]loss=0.0112 (0.0110): :  80% 4/5 [00:14<00:02,  2.88s/it]loss=0.0112 (0.0110): : 100% 5/5 [00:14<00:00,  2.89s/it]loss=0.0112 (0.0110): : 100% 5/5 [00:14<00:00,  2.90s/it]
+PSNR = 19.586952 portrait3d_4
+++> Evaluate portrait3d_4 of epoch 0 Finished.
+[INFO] Trainer: ngp | 2025-01-24_21-19-17 | cuda:0 | fp16 | 
+/home/wcc/RodinHD/data/save_diffusion_3/render_lr
+[INFO] #parameters: 72321
+[INFO] Loading 
+/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth ...
+[INFO] loaded model.
+Loading triplane from /home/wcc/RodinHD/data/save_diffusion_3/LR/portrait3d_5.npy
+tensor(-0.8867) tensor(-0.0078)
+++> Evaluate portrait3d_5 at epoch 0 ...
+  0% 0/5 [00:00<?, ?it/s]loss=0.0100 (0.0100): :   0% 0/5 [00:05<?, ?it/s]loss=0.0100 (0.0100): :  20% 1/5 [00:05<00:20,  5.04s/it]loss=0.0120 (0.0110): :  20% 1/5 [00:09<00:20,  5.04s/it]loss=0.0120 (0.0110): :  40% 2/5 [00:09<00:14,  4.99s/it]loss=0.0106 (0.0109): :  40% 2/5 [00:15<00:14,  4.99s/it]loss=0.0106 (0.0109): :  60% 3/5 [00:15<00:10,  5.06s/it]loss=0.0127 (0.0113): :  60% 3/5 [00:20<00:10,  5.06s/it]loss=0.0127 (0.0113): :  80% 4/5 [00:20<00:05,  5.03s/it]loss=0.0142 (0.0119): :  80% 4/5 [00:25<00:05,  5.03s/it]loss=0.0142 (0.0119): : 100% 5/5 [00:25<00:00,  5.05s/it]loss=0.0142 (0.0119): : 100% 5/5 [00:25<00:00,  5.04s/it]
+PSNR = 19.277672 portrait3d_5
+++> Evaluate portrait3d_5 of epoch 0 Finished.
+[INFO] Trainer: ngp | 2025-01-24_21-19-49 | cuda:0 | fp16 | 
+/home/wcc/RodinHD/data/save_diffusion_3/render_lr
+[INFO] #parameters: 72321
+[INFO] Loading 
+/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth ...
+[INFO] loaded model.
+Loading triplane from /home/wcc/RodinHD/data/save_diffusion_3/LR/portrait3d_6.npy
+tensor(-0.9644) tensor(-0.0062)
+++> Evaluate portrait3d_6 at epoch 0 ...
+  0% 0/5 [00:00<?, ?it/s]loss=0.0095 (0.0095): :   0% 0/5 [00:03<?, ?it/s]loss=0.0095 (0.0095): :  20% 1/5 [00:03<00:15,  3.82s/it]loss=0.0085 (0.0090): :  20% 1/5 [00:07<00:15,  3.82s/it]loss=0.0085 (0.0090): :  40% 2/5 [00:07<00:11,  3.79s/it]loss=0.0092 (0.0090): :  40% 2/5 [00:11<00:11,  3.79s/it]loss=0.0092 (0.0090): :  60% 3/5 [00:11<00:07,  3.82s/it]loss=0.0097 (0.0092): :  60% 3/5 [00:15<00:07,  3.82s/it]loss=0.0097 (0.0092): :  80% 4/5 [00:15<00:03,  3.81s/it]loss=0.0082 (0.0090): :  80% 4/5 [00:18<00:03,  3.81s/it]loss=0.0082 (0.0090): : 100% 5/5 [00:18<00:00,  3.78s/it]loss=0.0082 (0.0090): : 100% 5/5 [00:18<00:00,  3.79s/it]
+PSNR = 20.465566 portrait3d_6
+++> Evaluate portrait3d_6 of epoch 0 Finished.
+[INFO] Trainer: ngp | 2025-01-24_21-20-15 | cuda:0 | fp16 | 
+/home/wcc/RodinHD/data/save_diffusion_3/render_lr
+[INFO] #parameters: 72321
+[INFO] Loading 
+/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth ...
+[INFO] loaded model.
+Loading triplane from /home/wcc/RodinHD/data/save_diffusion_3/LR/portrait3d_7.npy
+tensor(-0.9980) tensor(-0.0065)
+++> Evaluate portrait3d_7 at epoch 0 ...
+  0% 0/5 [00:00<?, ?it/s]loss=0.0145 (0.0145): :   0% 0/5 [00:05<?, ?it/s]loss=0.0145 (0.0145): :  20% 1/5 [00:05<00:21,  5.37s/it]loss=0.0168 (0.0157): :  20% 1/5 [00:10<00:21,  5.37s/it]loss=0.0168 (0.0157): :  40% 2/5 [00:10<00:16,  5.40s/it]loss=0.0134 (0.0149): :  40% 2/5 [00:16<00:16,  5.40s/it]loss=0.0134 (0.0149): :  60% 3/5 [00:16<00:10,  5.40s/it]loss=0.0173 (0.0155): :  60% 3/5 [00:21<00:10,  5.40s/it]loss=0.0173 (0.0155): :  80% 4/5 [00:21<00:05,  5.36s/it]loss=0.0116 (0.0147): :  80% 4/5 [00:26<00:05,  5.36s/it]loss=0.0116 (0.0147): : 100% 5/5 [00:26<00:00,  5.35s/it]loss=0.0116 (0.0147): : 100% 5/5 [00:26<00:00,  5.37s/it]
+PSNR = 18.365209 portrait3d_7
+++> Evaluate portrait3d_7 of epoch 0 Finished.
+[INFO] Trainer: ngp | 2025-01-24_21-20-49 | cuda:0 | fp16 | 
+/home/wcc/RodinHD/data/save_diffusion_3/render_lr
+[INFO] #parameters: 72321
+[INFO] Loading 
+/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth ...
+[INFO] loaded model.
+Loading triplane from /home/wcc/RodinHD/data/save_diffusion_3/LR/portrait3d_8.npy
+tensor(-0.9253) tensor(-0.0056)
+++> Evaluate portrait3d_8 at epoch 0 ...
+  0% 0/5 [00:00<?, ?it/s]loss=0.0143 (0.0143): :   0% 0/5 [00:04<?, ?it/s]loss=0.0143 (0.0143): :  20% 1/5 [00:04<00:16,  4.00s/it]loss=0.0137 (0.0140): :  20% 1/5 [00:07<00:16,  4.00s/it]loss=0.0137 (0.0140): :  40% 2/5 [00:07<00:11,  3.99s/it]loss=0.0161 (0.0147): :  40% 2/5 [00:11<00:11,  3.99s/it]loss=0.0161 (0.0147): :  60% 3/5 [00:11<00:08,  4.00s/it]loss=0.0128 (0.0142): :  60% 3/5 [00:16<00:08,  4.00s/it]loss=0.0128 (0.0142): :  80% 4/5 [00:16<00:04,  4.02s/it]loss=0.0139 (0.0142): :  80% 4/5 [00:19<00:04,  4.02s/it]loss=0.0139 (0.0142): : 100% 5/5 [00:19<00:00,  3.97s/it]loss=0.0139 (0.0142): : 100% 5/5 [00:19<00:00,  3.99s/it]
+PSNR = 18.504880 portrait3d_8
+++> Evaluate portrait3d_8 of epoch 0 Finished.
+[INFO] Trainer: ngp | 2025-01-24_21-21-17 | cuda:0 | fp16 | 
+/home/wcc/RodinHD/data/save_diffusion_3/render_lr
+[INFO] #parameters: 72321
+[INFO] Loading 
+/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth ...
+[INFO] loaded model.
+Loading triplane from /home/wcc/RodinHD/data/save_diffusion_3/LR/portrait3d_9.npy
+tensor(-0.9604) tensor(-0.0046)
+++> Evaluate portrait3d_9 at epoch 0 ...
+  0% 0/5 [00:00<?, ?it/s]loss=0.0231 (0.0231): :   0% 0/5 [00:06<?, ?it/s]loss=0.0231 (0.0231): :  20% 1/5 [00:06<00:26,  6.71s/it]loss=0.0350 (0.0291): :  20% 1/5 [00:13<00:26,  6.71s/it]loss=0.0350 (0.0291): :  40% 2/5 [00:13<00:20,  6.88s/it]loss=0.0243 (0.0275): :  40% 2/5 [00:20<00:20,  6.88s/it]loss=0.0243 (0.0275): :  60% 3/5 [00:20<00:13,  6.86s/it]loss=0.0291 (0.0279): :  60% 3/5 [00:27<00:13,  6.86s/it]loss=0.0291 (0.0279): :  80% 4/5 [00:27<00:06,  6.84s/it]loss=0.0430 (0.0309): :  80% 4/5 [00:34<00:06,  6.84s/it]loss=0.0430 (0.0309): : 100% 5/5 [00:34<00:00,  6.93s/it]loss=0.0430 (0.0309): : 100% 5/5 [00:34<00:00,  6.89s/it]
+PSNR = 15.213880 portrait3d_9
+++> Evaluate portrait3d_9 of epoch 0 Finished.
+[INFO] Trainer: ngp | 2025-01-24_21-21-58 | cuda:0 | fp16 | 
+/home/wcc/RodinHD/data/save_diffusion_3/render_lr
+[INFO] #parameters: 72321
+[INFO] Loading 
+/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth ...
+[INFO] loaded model.
+Loading triplane from /home/wcc/RodinHD/data/save_diffusion_3/LR/portrait3d_10.npy
+tensor(-0.9673) tensor(-0.0207)
+++> Evaluate portrait3d_10 at epoch 0 ...
+  0% 0/5 [00:00<?, ?it/s]loss=0.0132 (0.0132): :   0% 0/5 [00:04<?, ?it/s]loss=0.0132 (0.0132): :  20% 1/5 [00:04<00:16,  4.16s/it]loss=0.0144 (0.0138): :  20% 1/5 [00:08<00:16,  4.16s/it]loss=0.0144 (0.0138): :  40% 2/5 [00:08<00:11,  3.97s/it]loss=0.0188 (0.0155): :  40% 2/5 [00:12<00:11,  3.97s/it]loss=0.0188 (0.0155): :  60% 3/5 [00:12<00:07,  3.99s/it]loss=0.0134 (0.0150): :  60% 3/5 [00:15<00:07,  3.99s/it]loss=0.0134 (0.0150): :  80% 4/5 [00:15<00:03,  3.91s/it]loss=0.0196 (0.0159): :  80% 4/5 [00:20<00:03,  3.91s/it]loss=0.0196 (0.0159): : 100% 5/5 [00:20<00:00,  4.08s/it]loss=0.0196 (0.0159): : 100% 5/5 [00:20<00:00,  4.03s/it]
+PSNR = 18.055064 portrait3d_10
+++> Evaluate portrait3d_10 of epoch 0 Finished.
+Average PSNR: 19.145

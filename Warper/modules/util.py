@@ -351,6 +351,12 @@ def filter_state_dict(state_dict, remove_name='fc'):
         new_state_dict[key] = state_dict[key]
     return new_state_dict
 
+def remove_prefix(state_dict, prefix):
+    new_state_dict = {}
+    for key in state_dict:
+        new_key = key[len(prefix):] if key.startswith(prefix) else key
+        new_state_dict[new_key] = state_dict[key]
+    return new_state_dict
 
 class GRN(nn.Module):
     """ GRN (Global Response Normalization) layer
