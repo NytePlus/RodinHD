@@ -27,7 +27,7 @@ class MotionExtractor(nn.Module):
         if init_path not in (None, ''):
             state_dict = torch.load(init_path, map_location=device)
             state_dict = filter_state_dict(state_dict, remove_name='head')
-            ret = self.detector.load_state_dict(state_dict, strict=False)
+            ret = self.load_state_dict(state_dict, strict=False)
             print(f'Load pretrained model from {init_path}, ret: {ret}')
 
     def forward(self, x):

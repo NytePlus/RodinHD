@@ -42,6 +42,7 @@ class Trainer(object):
                  criterion=None, # loss function, if None, assume inline implementation in train_step
                  lr_scheduler=None, # scheduler
                  optimizer=None, # wrapping module optimizer
+                 optimizer_me=None, # motion extracter optimizer
                  metrics=[], # metrics for evaluation, if None, use val_loss to measure performance, else use the first metric.
                  local_rank=0, # which GPU am I
                  world_size=1, # total num of GPUs
@@ -80,6 +81,7 @@ class Trainer(object):
             f'cuda:{local_rank}' if torch.cuda.is_available() else 'cpu')
         self.console = Console()
         self.optimizer = optimizer
+        self.optimizer_me = optimizer_me
         self.scheduler_fn = lr_scheduler
         self.input_shape = input_shape
 
@@ -88,7 +90,7 @@ class Trainer(object):
             warper = torch.nn.SyncBatchNorm.convert_sync_batchnorm(warper)
             self._warper = torch.nn.parallel.DistributedDataParallel(warper, device_ids=[local_rank],
                                                                     find_unused_parameters=False)
-            self.warper = self._model.module
+            self.warper = self._warper.module
         else:
             self.warper = self._warper = warper
 
@@ -114,6 +116,16 @@ class Trainer(object):
         self.log(
             f'[INFO] Trainer: {self.name} | {self.time_stamp} | {self.device} | {"fp16" if self.fp16 else "fp32"} | {self.workspace}')
         self.log(f'[INFO] #parameters: {sum([p.numel() for p in warper.parameters() if p.requires_grad])}')
+
+        self.ckpt_path = os.path.join(self.workspace, 'checkpoints')
+        if use_checkpoint == "latest":
+            checkpoint_list = sorted(glob.glob(f'{self.ckpt_path}/{self.name}_ep*.pth'))
+            if checkpoint_list:
+                checkpoint = checkpoint_list[-1]
+                self.log(f"[INFO] Latest checkpoint is {checkpoint}")
+                self.warper.load_state_dict(torch.load(checkpoint)["model"], strict=True)
+            else:
+                self.log("[WARN] No checkpoint found, model randomly initialized.")
 
         self.scaler = torch.cuda.amp.GradScaler(enabled=self.fp16)
         self.epoch = 0
@@ -259,7 +271,7 @@ class Trainer(object):
         if self.device == "mps":
             ctx = contextlib.nullcontext()
         else:
-            ctx = torch.autocast(device_type=self.device[:4], dtype=torch.float16,
+            ctx = torch.autocast(device_type='cuda', dtype=torch.float16,
                                  enabled=self.fp16)
         return ctx
 
@@ -346,19 +358,27 @@ class Trainer(object):
 
         self.local_step = 0
 
-        for src_x_np, ref_x_np, src_t, tgt_t in loader:
+        for src_x_np, ref_x_np, src_t, tgt_t, names in loader:
             self.local_step += 1
             self.global_step += 1
 
             self.optimizer.zero_grad()
+            if self.optimizer_me:
+                self.optimizer_me.zero_grad()
             src_x = self.prepare_source(src_x_np).to(self.device)
             ref_x = self.prepare_source(ref_x_np).to(self.device)
 
             with torch.cuda.amp.autocast(enabled=self.fp16):
                 loss, warped_t = self.train_step(src_x, ref_x, src_t, tgt_t)
 
+            for t, n in zip(warped_t, names):
+                with open(os.path.join(self.workspace, 'validation', n), 'wb') as f:
+                    np.save(f, t.detach().cpu().numpy())
+
             self.scaler.scale(loss).backward()
             self.scaler.step(self.optimizer)
+            if self.optimizer_me:
+                self.scaler.step(self.optimizer_me)
             self.scaler.update()
 
             if self.scheduler_update_every_step:
@@ -476,8 +496,11 @@ class Trainer(object):
 
 class TriplaneDataset(Dataset):
     def __init__(self, src_root, src_data, tgt_root, tgt_data, all_ids, device,
+                 local_rank=0,
+                 num_shards=1,
                  batch_size=1,
-                 preload_mm=True):
+                 preload_mm=True,
+                 ):
         self.src_root = src_root
         self.src_data = src_data
         self.tgt_root = tgt_root
@@ -491,7 +514,9 @@ class TriplaneDataset(Dataset):
         self.ref_photos = []
         self.src_tpath = []
         self.tgt_tpath = []
+        self.all_pair_ids = []
         self.pair_ids = []
+        self.name_dict = {}
 
         for id in all_ids:
             base_id = os.path.basename(id)
@@ -506,13 +531,14 @@ class TriplaneDataset(Dataset):
             for tgt_triplane_path in tgt_files:
                 tgt_base_id = os.path.splitext(os.path.basename(tgt_triplane_path))[0]
                 self.tgt_tpath.append(tgt_triplane_path)
-                self.pair_ids.append([len(self.src_tpath) - 1, len(self.tgt_tpath) - 1])
+                self.all_pair_ids.append([len(self.src_tpath) - 1, len(self.tgt_tpath) - 1])
 
                 tgt_photo_path = os.path.join(self.tgt_data, tgt_base_id, 'img_proc_fg_000000.png')
                 self.ref_photos.append(load_image_rgb(tgt_photo_path))
 
         self.src_triplanes = [None] * len(self.src_tpath)
         self.tgt_triplanes = [None] * len(self.tgt_tpath)
+        self.pair_ids = self.all_pair_ids[local_rank:][::num_shards]
 
         if self.preload_mm:
             len_src = len(self.src_tpath)
@@ -527,30 +553,36 @@ class TriplaneDataset(Dataset):
         if type == 'src':
             triplane = load_triplane(self.src_tpath[idx])
             self.src_triplanes[idx] = triplane
-            return triplane
+            self.name_dict[triplane] = self.src_tpath[idx].split('/')[-1]
+            return triplane, self.name_dict[triplane]
         elif type == 'tgt':
+            print(f'loading triplane from {self.tgt_tpath[idx]}')
             triplane = load_triplane(self.tgt_tpath[idx])
             self.tgt_triplanes[idx] = triplane
-            return triplane
+            self.name_dict[triplane] = self.tgt_tpath[idx].split('/')[-1]
+            return triplane, self.name_dict[triplane]
         else:
             raise ValueError(f"Unknown triplane type: {type}")
 
     def __getitem__(self, idx):
         src_id, tgt_id = self.pair_ids[idx]
         if not self.preload_mm:
-            src_t = self.load_triplane_from_idx(src_id, 'src')
-            tgt_t = self.load_triplane_from_idx(tgt_id, 'tgt')
-            return self.src_photos[src_id], self.ref_photos[tgt_id], src_t, tgt_t
+            src_t, _ = self.load_triplane_from_idx(src_id, 'src')
+            tgt_t, name = self.load_triplane_from_idx(tgt_id, 'tgt')
+            return self.src_photos[src_id], self.ref_photos[tgt_id], src_t, tgt_t, name
         else:
+            tgt_triplane = self.tgt_triplanes[tgt_id]
             return self.src_photos[src_id], self.ref_photos[tgt_id], \
-                self.src_triplanes[src_id], self.tgt_triplanes[tgt_id]
+                self.src_triplanes[src_id], tgt_triplane, self.name_dict[tgt_triplane]
 
     def __len__(self):
         return len(self.pair_ids)
 
     def dataloader(self):
         def custom_collate_fn(batch):
-            src_x, ref_x, src_t, tgt_t = zip(*batch) # tuple
+            src_x, ref_x, src_t, tgt_t, names = zip(*batch) # tuple
             return np.stack(src_x), np.stack(ref_x), \
-                torch.stack(src_t).to(self.device), torch.stack(tgt_t).to(self.device)
+                torch.stack(src_t).to(self.device), \
+                torch.stack(tgt_t).to(self.device), \
+                names
         return DataLoader(self, batch_size = self.batch_size, shuffle = True, collate_fn = custom_collate_fn)
