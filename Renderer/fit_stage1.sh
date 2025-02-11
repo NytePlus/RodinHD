@@ -13,7 +13,7 @@ python main.py \
     --triplane_channels 32 \
     --ckpt ${ckpt_dir} \
     --data_root ${data_root} \
-    --out_loop_eps 30 --iters 5000 --lr0 2e-3 --lr1 2e-4 --eval_freq 10 \
+    --out_loop_eps 120 --iters 5000 --lr0 2e-3 --lr1 2e-4 --eval_freq 10 \
     --l1_reg_weight 1e-4 \
     --tv_weight 1e-2 \
     --dist_weight 0 \

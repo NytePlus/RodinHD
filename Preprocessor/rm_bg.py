@@ -22,8 +22,8 @@ def remove_background_floodFill(img_np, bg_color = None, fill_color = (0, 0, 0),
 
     return img_np
 
-base_dir = '/data2/wcc/stable-dreamfusion-3DPortrait/rodinhd_data'
-out_dir = '/data2/wcc/stable-dreamfusion-3DPortrait/rodinhd_nobg'
+base_dir = '../data/portrait3d_data'
+out_dir = '../data/portrait3d_nobg'
 num_threads = 1
 dirs = os.listdir(base_dir)
 os.makedirs(out_dir, exist_ok=True)

@@ -52,7 +52,7 @@ def load_data(
     if txt_file != '':
         with open(txt_file) as f:
             all_files = f.read().splitlines()
-        all_files = sorted([os.path.join(data_dir, x+'.png') for x in all_files])
+        all_files = [os.path.join(data_dir, x+'.png') for x in all_files]
     else:
         all_files = _list_image_files_recursively(data_dir) 
     if start_idx >= 0 and end_idx >= 0 and start_idx < end_idx:
@@ -72,11 +72,11 @@ def load_data(
     )
     if deterministic:
         loader = DataLoader(
-            dataset, batch_size=batch_size, shuffle=False, num_workers=4, drop_last=True, pin_memory=True
+            dataset, batch_size=batch_size, shuffle=False, num_workers=4, drop_last=True, pin_memory=False
         )
     else:
         loader = DataLoader(
-            dataset, batch_size=batch_size, shuffle=True, num_workers=4, drop_last=True, pin_memory=True
+            dataset, batch_size=batch_size, shuffle=True, num_workers=4, drop_last=True, pin_memory=False
         )
     while True:
         yield from loader

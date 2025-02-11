@@ -10,13 +10,12 @@ import random
 import tensorboardX
 
 import numpy as np
-from numpy.f2py.auxfuncs import throw_error
-from uitls import load_triplane, load_image_rgb
-from concurrent.futures.thread import ThreadPoolExecutor
 
 from torch import nn, optim
 from rich.console import Console
-from torch.utils.data import DataLoader, Dataset
+
+from nerf.utils import Trainer as _Trainer
+from pkg_resources import parse_version
 
 @torch.jit.script
 def linear_to_srgb(x):
@@ -33,10 +32,11 @@ def seed_everything(seed):
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
 
-class Trainer(object):
+class Trainer(_Trainer):
     def __init__(self,
                  name, # name of this experiment
                  opt, # extra conf
+                 renderer, # nerf renderer
                  warper, # warping module
                  motion_extractor, # motion extractor
                  criterion=None, # loss function, if None, assume inline implementation in train_step
@@ -55,11 +55,14 @@ class Trainer(object):
                  best_mode='min', # the smaller/larger result, the better
                  use_loss_as_metric=True, # use loss as the first metric
                  report_metric_at_train=False, # also report metrics at training
+                 renderer_checkpoint="",
                  use_checkpoint="latest", # which ckpt to use at init time
                  use_tensorboardX=True, # whether to use tensorboard for logging
                  scheduler_update_every_step=False, # whether to call scheduler.step() after every train step
                  input_shape=[256,256], # input shape of source image
                  ):
+        super().__init__(name, opt, renderer, criterion, fp16=fp16, use_checkpoint = renderer_checkpoint, local_rank = local_rank, world_size = world_size, device = device, workspace=workspace)
+
         self.name = name
         self.opt = opt
         self.mute = mute
@@ -95,9 +98,10 @@ class Trainer(object):
             self.warper = self._warper = warper
 
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        motion_extractor.to(self.device)
-        motion_extractor.load_pretrained(current_dir + '/weights/motion_extractor.pth', device)
-        self.motion_extractor = motion_extractor
+        if motion_extractor is not None:
+            motion_extractor.to(self.device)
+            motion_extractor.load_pretrained(current_dir + '/weights/motion_extractor.pth', device)
+            self.motion_extractor = motion_extractor
 
         if isinstance(criterion, nn.Module):
             criterion.to(self.device)
@@ -113,21 +117,25 @@ class Trainer(object):
             self.best_path = f"{self.ckpt_path}/{self.name}.pth"
             os.makedirs(self.ckpt_path, exist_ok=True)
 
-        self.log(
-            f'[INFO] Trainer: {self.name} | {self.time_stamp} | {self.device} | {"fp16" if self.fp16 else "fp32"} | {self.workspace}')
+            self.valid_path = os.path.join(self.workspace, 'validation')
+            os.makedirs(self.valid_path, exist_ok=True)
+
         self.log(f'[INFO] #parameters: {sum([p.numel() for p in warper.parameters() if p.requires_grad])}')
 
-        self.ckpt_path = os.path.join(self.workspace, 'checkpoints')
         if use_checkpoint == "latest":
             checkpoint_list = sorted(glob.glob(f'{self.ckpt_path}/{self.name}_ep*.pth'))
             if checkpoint_list:
                 checkpoint = checkpoint_list[-1]
-                self.log(f"[INFO] Latest checkpoint is {checkpoint}")
-                self.warper.load_state_dict(torch.load(checkpoint)["model"], strict=True)
+                ret = self.warper.load_state_dict(torch.load(checkpoint)["model"], strict=True)
+                self.log(f"[INFO] Latest checkpoint is {checkpoint}, ret: {ret}")
             else:
                 self.log("[WARN] No checkpoint found, model randomly initialized.")
 
-        self.scaler = torch.cuda.amp.GradScaler(enabled=self.fp16)
+        if parse_version(torch.__version__) < parse_version("1.12.0"):
+            self.scaler = torch.cuda.amp.GradScaler(enabled=self.fp16)
+        else:
+            self.scaler = torch.amp.GradScaler('cuda', enabled=self.fp16)
+
         self.epoch = 0
         self.global_step = 0
         self.local_step = 0
@@ -147,6 +155,8 @@ class Trainer(object):
         # auto fix
         if len(metrics) == 0 or self.use_loss_as_metric:
             self.best_mode = 'min'
+
+        self.error_map = None
 
 
     def log(self, *args, **kwargs):
@@ -191,7 +201,7 @@ class Trainer(object):
         self.use_tensorboardX = use_tensorboardX
         return psnr
 
-    def evaluate_one_epoch(self, triplane, loader, name=None):
+    def evaluate_one_epoch(self, loader, name=None):
         if self.local_rank == 0:
             self.log(f"++> Evaluate {loader._data.subject_id} at epoch {self.epoch} ...")
 
@@ -271,7 +281,7 @@ class Trainer(object):
         if self.device == "mps":
             ctx = contextlib.nullcontext()
         else:
-            ctx = torch.autocast(device_type='cuda', dtype=torch.float16,
+            ctx = torch.autocast('cuda', dtype=torch.float16,
                                  enabled=self.fp16)
         return ctx
 
@@ -325,7 +335,7 @@ class Trainer(object):
         x = x.to(self.device)
         return x
 
-    def train_step(self, src_photo, ref_photo, src_triplane, tgt_triplane):
+    def end2end_train_step(self, src_photo, ref_photo, src_triplane, tgt_triplane):
         bs, _, _, c, h, w = src_triplane.shape
 
         ref_kp = self.get_kp_info(ref_photo)['kp'] # BxNx3
@@ -335,32 +345,158 @@ class Trainer(object):
         warpped_triplane = wrapped_dict['out'].view(bs, 3, 1, c, h, w)
 
         # MSE loss
-        loss = self.criterion(warpped_triplane, tgt_triplane).mean(-1)
-        loss = loss.mean()
+        loss = self.criterion(warpped_triplane, tgt_triplane).mean()
+        ref_loss = self.criterion(src_triplane, tgt_triplane).mean()
 
-        return loss, warpped_triplane
+        return warpped_triplane, loss, ref_loss
 
-    def train_one_epoch(self, loader):
-        self.log(f"Start Training Epoch {self.epoch}, lr={self.optimizer.param_groups[0]['lr']:.6f} ...")
+    def train_step(self, src_photo, ref_photo, src_triplane, img_loader):
+        bs, _3, _1, c, h, w = src_triplane.shape
+
+        ref_kp = self.get_kp_info(ref_photo)['kp']  # BxNx3
+        src_kp = self.get_kp_info(src_photo)['kp']  # BxNx3
+
+        for i, data in enumerate(img_loader):
+            self.local_step += 1
+            self.global_step += 1
+
+            if self.local_rank == 0 and self.report_metric_at_train:
+                for metric in self.metrics:
+                    metric.clear()
+
+            if parse_version(torch.__version__) >= parse_version("1.12.0"):
+                with torch.amp.autocast(device_type='cuda', enabled=self.fp16):
+                    wraped_dict = self.warper(src_triplane, ref_kp, src_kp)  # B×3×1×32×512×512
+                    warped_triplane = wraped_dict['out'].view(bs, 3, 1, c, h, w)
+
+                    pred_rgb, gt_rgb, loss = super().train_step(warped_triplane, data)
+            else:
+                with torch.cuda.amp.autocast(enabled=self.fp16):
+                    wraped_dict = self.warper(src_triplane, ref_kp, src_kp)  # B×3×1×32×512×512
+                    warped_triplane = wraped_dict['out'].view(bs, 3, 1, c, h, w)
+
+                    pred_rgb, gt_rgb, loss = super().train_step(warped_triplane, data)
+
+            loss_val = loss.item()
+            self.total_loss += loss_val
+
+            if self.local_rank == 0:
+                if self.report_metric_at_train:
+                    for metric in self.metrics:
+                        metric.update(pred_rgb, gt_rgb)
+
+                if self.use_tensorboardX:
+                    self.writer.add_scalar(f'train/loss', loss_val, self.global_step)
+                    self.writer.add_scalar(f'train/lr', self.optimizer.param_groups[0]['lr'], self.global_step)
+
+                if self.scheduler_update_every_step:
+                    self.pbar.set_description(
+                        f"loss={loss_val:.4f} ({self.total_loss / self.local_step:.4f}), lr={self.optimizer.param_groups[0]['lr']:.6f}")
+                else:
+                    self.pbar.set_description(f"loss={loss_val:.4f} ({self.total_loss / self.local_step:.4f})")
+                self.pbar.update(1)
+
+            self.scaler.scale(loss).backward()
+        self.scaler.step(self.optimizer)
+        self.scaler.update()
+
+        average_loss = self.total_loss / self.local_step
+
+        return warped_triplane, average_loss
+
+    def aborted_union_train_step(self, src_triplane, ref_feature, img_loader):
+        # TODO:
+        #  1. Evaluate
+        #  2. optimizer isn't work
+        #  ~~ 3. raymarching(when not fp16) and grid_sample(when fp16) appears nan ~~ it's all pytorch version's fault
+        self.local_step = 0
+
+        self.optimizer.zero_grad()
+
+        if self.local_rank == 0:
+            pbar = tqdm.tqdm(total=len(img_loader),
+                             bar_format='{desc}: {percentage:3.0f}% {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]')
 
         total_loss = 0
-        if self.local_rank == 0 and self.report_metric_at_train:
-            for metric in self.metrics:
-                metric.clear()
+        for data in img_loader:
+            self.local_step += 1
+            self.global_step += 1
+
+            if self.local_rank == 0 and self.report_metric_at_train:
+                for metric in self.metrics:
+                    metric.clear()
+
+            # Nyte: fp16 and Adam eps=1e-15 cause nan.
+            with torch.cuda.amp.autocast(enabled=self.fp16):
+                warped_triplane = self.warper(src_triplane, ref_feature, src_triplane)
+                warped_triplane = warped_triplane.reshape(1, 32, 3, self.opt.resolution0, self.opt.resolution1)
+                warped_triplane = warped_triplane.permute(2, 0, 1, 3, 4).contiguous().clamp(-1.0, 1.0)
+
+                pred_rgb, gt_rgb, loss = super().train_step(warped_triplane, data)
+
+            loss_val = loss.item()
+            total_loss += loss_val
+
+            if self.local_rank == 0:
+                if self.report_metric_at_train:
+                    for metric in self.metrics:
+                        metric.update(pred_rgb, gt_rgb)
+
+                if self.use_tensorboardX:
+                    self.writer.add_scalar(f'train/loss', loss_val, self.global_step)
+                    self.writer.add_scalar(f'train/lr', self.optimizer.param_groups[0]['lr'], self.global_step)
+
+                if self.scheduler_update_every_step:
+                    pbar.set_description(
+                        f"loss={loss_val:.4f} ({total_loss / self.local_step:.4f}), lr={self.optimizer.param_groups[0]['lr']:.6f}")
+                else:
+                    pbar.set_description(f"loss={loss_val:.4f} ({total_loss / self.local_step:.4f})")
+                pbar.update(1)
+
+            self.scaler.scale(loss).backward()
+        self.scaler.step(self.optimizer)
+
+        average_loss = total_loss / self.local_step
+
+        if self.local_rank == 0:
+            pbar.close()
+            if self.report_metric_at_train:
+                for metric in self.metrics:
+                    self.log(metric.report(), style="red")
+                    if self.use_tensorboardX:
+                        metric.write(self.writer, self.epoch, prefix="train")
+                    metric.clear()
+
+        return warped_triplane, pred_rgb, gt_rgb, average_loss
+
+    def aborted_train_step(self, src_triplane, tgt_triplane, latent):
+        with torch.cuda.amp.autocast(enabled=self.fp16):
+            delta = self.warper(src_triplane, latent)
+            warped_triplane = src_triplane + delta
+        return warped_triplane, self.criterion(warped_triplane, tgt_triplane), self.criterion(src_triplane, tgt_triplane)
+
+    def end2end_train_one_epoch(self, loader):
+        self.local_step = 0
+
+        total_loss = 0
+        reftotal_loss = 0
+        self.log(f"Start Training Epoch {self.epoch}, lr={self.optimizer.param_groups[0]['lr']:.6f} ...")
+
+        if self.local_rank == 0:
+            pbar = tqdm.tqdm(total=len(loader),
+                             bar_format='{desc}: {percentage:3.0f}% {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]')
 
         self.warper.train()
         if self.world_size > 1:
             loader.sampler.set_epoch(self.epoch)
 
-        if self.local_rank == 0:
-            pbar = tqdm.tqdm(total=len(loader) * loader.batch_size,
-                             bar_format='{desc}: {percentage:3.0f}% {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]')
-
-        self.local_step = 0
-
         for src_x_np, ref_x_np, src_t, tgt_t, names in loader:
             self.local_step += 1
             self.global_step += 1
+
+            if self.local_rank == 0 and self.report_metric_at_train:
+                for metric in self.metrics:
+                    metric.clear()
 
             self.optimizer.zero_grad()
             if self.optimizer_me:
@@ -368,8 +504,12 @@ class Trainer(object):
             src_x = self.prepare_source(src_x_np).to(self.device)
             ref_x = self.prepare_source(ref_x_np).to(self.device)
 
+            # union
+            # triplane = triplane.to(self.device)
+            # latent = latent.to(self.device)
+
             with torch.cuda.amp.autocast(enabled=self.fp16):
-                loss, warped_t = self.train_step(src_x, ref_x, src_t, tgt_t)
+                warped_t, loss, ref_loss = self.train_step(src_x, ref_x, src_t, tgt_t)
 
             for t, n in zip(warped_t, names):
                 with open(os.path.join(self.workspace, 'validation', n), 'wb') as f:
@@ -380,12 +520,16 @@ class Trainer(object):
             if self.optimizer_me:
                 self.scaler.step(self.optimizer_me)
             self.scaler.update()
-
-            if self.scheduler_update_every_step:
-                self.lr_scheduler.step()
+            # aborted
+            # warped_t, loss, ref_loss = self.train_step(src_t, tgt_t, latent)
+            # for i, id in enumerate(ids):
+            #     torch.save(warped_t[i], os.path.join(self.workspace, id + ".pt"))
 
             loss_val = loss.item()
             total_loss += loss_val
+
+            reftotal_loss += ref_loss.item()
+            refavg_loss = reftotal_loss / self.local_step
 
             if self.local_rank == 0:
                 if self.report_metric_at_train:
@@ -400,13 +544,14 @@ class Trainer(object):
                     pbar.set_description(
                         f"loss={loss_val:.4f} ({total_loss / self.local_step:.4f}), lr={self.optimizer.param_groups[0]['lr']:.6f}")
                 else:
-                    pbar.set_description(f"loss={loss_val:.4f} ({total_loss / self.local_step:.4f})")
-                pbar.update(loader.batch_size)
+                    pbar.set_description(f"loss={loss_val:.4f} ({total_loss / self.local_step:.4f}) ref={refavg_loss:.4f}")
+                pbar.update(1)
 
-            del src_x, ref_x
+
+            if self.scheduler_update_every_step:
+                self.lr_scheduler.step()
 
         average_loss = total_loss / self.local_step
-        self.stats["loss"].append(average_loss)
 
         if self.local_rank == 0:
             pbar.close()
@@ -416,6 +561,62 @@ class Trainer(object):
                     if self.use_tensorboardX:
                         metric.write(self.writer, self.epoch, prefix="train")
                     metric.clear()
+
+            if self.use_tensorboardX:
+                self.writer.add_scalar(f'train/loss', average_loss, self.global_step)
+
+        self.stats["loss"].append(average_loss)
+
+        if not self.scheduler_update_every_step:
+            if isinstance(self.lr_scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                self.lr_scheduler.step(average_loss)
+            else:
+                self.lr_scheduler.step()
+
+        self.log(f"==> Finished Epoch {self.epoch}.")
+
+    def train_one_epoch(self, loader):
+        self.local_step = 0
+
+        self.total_loss = 0
+        self.log(f"Start Training Epoch {self.epoch}, lr={self.optimizer.param_groups[0]['lr']:.6f} ...")
+
+        if self.local_rank == 0:
+            self.pbar = tqdm.tqdm(total=len(loader) * len(loader.dataset[0][3]),
+                             bar_format='{desc}: {percentage:3.0f}% {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]')
+
+        self.warper.train()
+
+        for src_t, src_x_np, ref_x_np, img_loader, tgt_ids in loader:
+            src_x = self.prepare_source(src_x_np).to(self.device)
+            ref_x = self.prepare_source(ref_x_np).to(self.device)
+            src_t = src_t.to(self.device)
+
+
+            if parse_version(torch.__version__) >= parse_version("1.12.0"):
+                with torch.amp.autocast(device_type='cuda', enabled=self.fp16):
+                    warped_t, average_loss = self.train_step(src_x, ref_x, src_t, img_loader)
+            else:
+                with torch.cuda.amp.autocast(enabled=self.fp16):
+                    warped_t, average_loss = self.train_step(src_x, ref_x, src_t, img_loader)
+
+            for t, n in zip(warped_t, tgt_ids):
+                with open(os.path.join(self.workspace, 'validation', n), 'wb') as f:
+                    np.save(f, t.detach().cpu().numpy())
+
+        if self.local_rank == 0:
+            self.pbar.close()
+            if self.report_metric_at_train:
+                for metric in self.metrics:
+                    self.log(metric.report(), style="red")
+                    if self.use_tensorboardX:
+                        metric.write(self.writer, self.epoch, prefix="train")
+                    metric.clear()
+
+            if self.use_tensorboardX:
+                self.writer.add_scalar(f'train/loss', average_loss, self.global_step)
+
+        self.stats["loss"].append(average_loss)
 
         if not self.scheduler_update_every_step:
             if isinstance(self.lr_scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
@@ -431,8 +632,6 @@ class Trainer(object):
 
         for epoch in range(self.epoch + 1, max_epochs + 1):
             self.epoch = epoch
-            # TODO: evaluate codes
-            # self.evaluate_one_epoch(triplane, valid_loader)
 
             self.train_one_epoch(train_loader)
 
@@ -440,7 +639,7 @@ class Trainer(object):
                 self.save_checkpoint(full=True, best=False)
 
             if self.epoch % self.eval_interval == 0:
-                # self.evaluate_one_epoch(triplane, valid_loader)
+                # self.evaluate_one_epoch(train_loader)
                 if self.local_rank == 0:
                     self.save_checkpoint(full=False, best=False)
 
@@ -493,96 +692,3 @@ class Trainer(object):
                     torch.save(state, self.best_path)
             else:
                 self.log(f"[WARN] no evaluated results found, skip saving best checkpoint.")
-
-class TriplaneDataset(Dataset):
-    def __init__(self, src_root, src_data, tgt_root, tgt_data, all_ids, device,
-                 local_rank=0,
-                 num_shards=1,
-                 batch_size=1,
-                 preload_mm=True,
-                 ):
-        self.src_root = src_root
-        self.src_data = src_data
-        self.tgt_root = tgt_root
-        self.tgt_data = tgt_data
-        self.batch_size = batch_size
-        self.device = device
-        self.preload_mm = preload_mm
-
-        self.all_ids = all_ids
-        self.src_photos = []
-        self.ref_photos = []
-        self.src_tpath = []
-        self.tgt_tpath = []
-        self.all_pair_ids = []
-        self.pair_ids = []
-        self.name_dict = {}
-
-        for id in all_ids:
-            base_id = os.path.basename(id)
-            src_triplane_path = os.path.join(self.src_root, base_id + '.npy')
-            self.src_tpath.append(src_triplane_path)
-
-            # NOTE: the first img is front.
-            src_photo_path = os.path.join(self.src_data, base_id, 'img_proc_fg_000000.png')
-            self.src_photos.append(load_image_rgb(src_photo_path))
-
-            tgt_files = glob.glob(os.path.join(tgt_root, base_id + '_*.npy'))
-            for tgt_triplane_path in tgt_files:
-                tgt_base_id = os.path.splitext(os.path.basename(tgt_triplane_path))[0]
-                self.tgt_tpath.append(tgt_triplane_path)
-                self.all_pair_ids.append([len(self.src_tpath) - 1, len(self.tgt_tpath) - 1])
-
-                tgt_photo_path = os.path.join(self.tgt_data, tgt_base_id, 'img_proc_fg_000000.png')
-                self.ref_photos.append(load_image_rgb(tgt_photo_path))
-
-        self.src_triplanes = [None] * len(self.src_tpath)
-        self.tgt_triplanes = [None] * len(self.tgt_tpath)
-        self.pair_ids = self.all_pair_ids[local_rank:][::num_shards]
-
-        if self.preload_mm:
-            len_src = len(self.src_tpath)
-            with ThreadPoolExecutor() as executor:
-                executor.map(self.load_triplane_from_idx, range(len_src), ['src'] * len_src)
-
-            len_tgt = len(self.tgt_tpath)
-            with ThreadPoolExecutor() as executor:
-                executor.map(self.load_triplane_from_idx, range(len_tgt), ['tgt'] * len_tgt)
-
-    def load_triplane_from_idx(self, idx, type: str):
-        if type == 'src':
-            triplane = load_triplane(self.src_tpath[idx])
-            self.src_triplanes[idx] = triplane
-            self.name_dict[triplane] = self.src_tpath[idx].split('/')[-1]
-            return triplane, self.name_dict[triplane]
-        elif type == 'tgt':
-            print(f'loading triplane from {self.tgt_tpath[idx]}')
-            triplane = load_triplane(self.tgt_tpath[idx])
-            self.tgt_triplanes[idx] = triplane
-            self.name_dict[triplane] = self.tgt_tpath[idx].split('/')[-1]
-            return triplane, self.name_dict[triplane]
-        else:
-            raise ValueError(f"Unknown triplane type: {type}")
-
-    def __getitem__(self, idx):
-        src_id, tgt_id = self.pair_ids[idx]
-        if not self.preload_mm:
-            src_t, _ = self.load_triplane_from_idx(src_id, 'src')
-            tgt_t, name = self.load_triplane_from_idx(tgt_id, 'tgt')
-            return self.src_photos[src_id], self.ref_photos[tgt_id], src_t, tgt_t, name
-        else:
-            tgt_triplane = self.tgt_triplanes[tgt_id]
-            return self.src_photos[src_id], self.ref_photos[tgt_id], \
-                self.src_triplanes[src_id], tgt_triplane, self.name_dict[tgt_triplane]
-
-    def __len__(self):
-        return len(self.pair_ids)
-
-    def dataloader(self):
-        def custom_collate_fn(batch):
-            src_x, ref_x, src_t, tgt_t, names = zip(*batch) # tuple
-            return np.stack(src_x), np.stack(ref_x), \
-                torch.stack(src_t).to(self.device), \
-                torch.stack(tgt_t).to(self.device), \
-                names
-        return DataLoader(self, batch_size = self.batch_size, shuffle = True, collate_fn = custom_collate_fn)

@@ -1,29 +1,36 @@
 import os
 import sys
+
+sys.path.append('../Renderer')
 import torch
 import argparse
 import numpy as np
 
-sys.path.append('../')
-
-from Renderer import dist_util
 from torch import optim, nn
 from mpi4py import MPI
-from Renderer.TriplaneFit.network import NeRFNetwork
+from TriplaneFit.network import NeRFNetwork
 
-from Renderer.nerf.provider import NeRFDataset
-from Warper.metrics import PSNRMeter
-from Warper.modules.motion_extractor import MotionExtractor
-from Warper.trainer import seed_everything, Trainer, TriplaneDataset
-from Warper.modules.warping_network import WarpingNetwork
+import dist_util
+
+from provider import TriplaneLatentDataset, TriplaneDataset, TriplaneImagesDataset
+from metrics import PSNRMeter
+from modules.motion_extractor import MotionExtractor
+from trainer import seed_everything, Trainer
+from modules.warping_network import WarpingNetwork
+# from Warper.modules.conv_warping import WarpingNetwork
+from modules.conv_light_warping import LightWarpingNetwork
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('path', type=str)
+    parser.add_argument('save_dir', type=str)
     parser.add_argument('--src_root', type=str, default='')
-    parser.add_argument('--tgt_root', type=str, default='')
     parser.add_argument('--src_data', type=str, default='')
+    parser.add_argument('--tgt_root', type=str, default='')
     parser.add_argument('--tgt_data', type=str, default='')
+    parser.add_argument('--latent_root', type=str, default='')
+    parser.add_argument('-O', action='store_true', help="equals --fp16 --cuda_ray --preload")
+    parser.add_argument('--cuda_ray', action='store_true', help="use CUDA raymarching instead of pytorch")
     parser.add_argument('-debug', action='store_true', help="debug for tensor dims")
     parser.add_argument('--test', action='store_true', help="test mode")
     parser.add_argument('--workspace', type=str, default='workspace')
@@ -31,8 +38,12 @@ if __name__ == "__main__":
     parser.add_argument('--dataset', type=str, default='facescape')
     ### training options
     parser.add_argument('--num_epochs', type=int, default=9000, help="training iters")
-    parser.add_argument('--lr0', type=float, default=2e-2, help="initial learning rate for warper")
+    parser.add_argument('--lr0', type=float, default=2e-4, help="initial learning rate for warper")
     parser.add_argument('--ckpt', type=str, default='')
+    parser.add_argument('--r_ckpt', type=str, default='/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth')
+    parser.add_argument('--num_rays', type=int, default=8192, help="num rays sampled per image for each training step")
+    parser.add_argument('--patch_size', type=int, default=1, help="[experimental] render patches in training, so as to apply LPIPS loss. 1 means disabled, use [64, 32, 16] to enable")
+
 
     ### network backbone options
     parser.add_argument('--fp16', action='store_true', help="use amp mixed precision training")
@@ -41,6 +52,7 @@ if __name__ == "__main__":
     parser.add_argument('--downscale', type=int, default=1)
     parser.add_argument('--resolution0', type=int, default=512)
     parser.add_argument('--resolution1', type=int, default=512)
+    parser.add_argument('--grid_size', type=int, default=256)
 
     ### dataset options
     parser.add_argument('--batch_size', type=int, default=1, help="batch size")
@@ -64,63 +76,125 @@ if __name__ == "__main__":
     parser.add_argument('--no_tqdm', action='store_true', help="disable tqdm")
     parser.add_argument('--start_idx', type=int, default=-1, help="start idx of index file, <0 uses no start idx")
     parser.add_argument('--end_idx', type=int, default=-1, help="end idx of index file, <0 uses no end idx")
+    parser.add_argument('--rand_pose', type=int, default=-1,
+                        help="<0 uses no rand pose, =0 only uses rand pose, >0 sample one rand pose every $ known poses")
+    parser.add_argument('--error_map', action='store_true', help="use error map to sample rays")
 
     opt = parser.parse_args()
     seed_everything(opt.seed)
-
     dist_util.setup_dist()
-    print('setup done.')
     device = dist_util.dev()
 
-    warper = WarpingNetwork(
-        num_kp = 21,
-        block_expansion = 8,
-        max_features = 512,
-        num_down_blocks = 2,
-        reshape_channel = 32,
-        estimate_occlusion_map = False,
-        dense_motion_params={
-            'block_expansion': 64,
-            'max_features': 1024,
-            'num_blocks': 2,
-            'reshape_depth': 32,
-            'compress': 8,
-            'down_scale': 2,
-        }
+    if opt.O:
+        opt.fp16 = True
+        opt.cuda_ray = True
+
+    renderer = NeRFNetwork(
+        resolution=[opt.resolution0] * 3,
+        bound=opt.bound,
+        cuda_ray=opt.cuda_ray,
+        density_scale=1,
+        min_near=opt.min_near,
+        density_thresh=opt.density_thresh,
+        bg_radius=opt.bg_radius,
+        grid_size=opt.grid_size,
+        sigma_rank=[int(opt.triplane_channels // 4)] * 3,
+        color_rank=[int(opt.triplane_channels // 4 * 3)] * 3,
+        triplane_channels=opt.triplane_channels,
     )
 
-    motion_extractor = MotionExtractor(
-        num_kp = 21,
-        backbone = 'convnextv2_tiny'
-    )
+    if True:
+        warper = WarpingNetwork(
+            num_kp = 21,
+            block_expansion = 8,
+            max_features = 512,
+            num_down_blocks = 2,
+            reshape_channel = 32,
+            estimate_occlusion_map = False,
+            dense_motion_params={
+                'block_expansion': 64,
+                'max_features': 1024,
+                'num_blocks': 2,
+                'reshape_depth': 32,
+                'compress': 8,
+                'down_scale': 2,
+            }
+        )
 
-    shard = MPI.COMM_WORLD.Get_rank()
-    num_shards = MPI.COMM_WORLD.Get_size()
+        motion_extractor = MotionExtractor(
+            num_kp=21,
+            backbone='convnextv2_tiny'
+        )
+    elif False:
+        warper = WarpingNetwork(
+            xf_width=512,
+            model_channels=192,
+            out_channels=64,
+            num_res_blocks=3,
+            attention_resolutions=[4, 8, 16],
+            dropout=0.1,
+            channel_mult=(1, 1, 2, 3, 4),
+            use_fp16=False,
+            num_heads=1,
+            num_heads_upsample=-1,
+            num_head_channels=64,
+            use_scale_shift_norm=True,
+            resblock_updown=True,
+            in_channels=32,
+        )
+    else:
+        warper = LightWarpingNetwork(
+            scale = 3,
+            image_size=512,
+            n_feats=32,
+            use_fp16=False,
+            use_checkpoint=True,
+            ch_mult=[2, 4],
+            use_scale_shift_norm=False,
+            dtype='32',
+            use_3d_conv=False,
+            n_resblocks=2
+        )
+        # half cannot coexist with autocast?
 
     criterion = nn.MSELoss(reduction='mean')
-    optimizer = torch.optim.Adam(warper.parameters(), lr=opt.lr0, betas=(0.9, 0.99), eps=1e-15)
+    optimizer = torch.optim.Adam(warper.parameters(), lr=opt.lr0, betas=(0.9, 0.99), eps=1e-8)
     optimizer_me = torch.optim.Adam(motion_extractor.parameters(), lr=opt.lr0, betas=(0.9, 0.99), eps=1e-15)
 
     scheduler = lambda optimizer: optim.lr_scheduler.LambdaLR(optimizer, lambda iter: 0.01 ** min(iter / opt.num_epochs, 1))
-    trainer = Trainer('snapshot_3', opt, warper, motion_extractor, local_rank=shard, world_size=num_shards, device=device, workspace=opt.workspace, optimizer=optimizer, optimizer_me=optimizer_me, criterion=criterion, fp16=opt.fp16, lr_scheduler=scheduler, scheduler_update_every_step=False, metrics=[PSNRMeter()], use_checkpoint=opt.ckpt, eval_interval=opt.eval_freq)
+    shard = MPI.COMM_WORLD.Get_rank()
+    num_shards = MPI.COMM_WORLD.Get_size()
+    trainer = Trainer('snapshot_8', opt, renderer, warper, motion_extractor, local_rank=shard, world_size=num_shards, device=device, workspace=opt.workspace, optimizer=optimizer, optimizer_me=optimizer_me, criterion=criterion, fp16=opt.fp16, lr_scheduler=scheduler, scheduler_update_every_step=False, metrics=[PSNRMeter()], use_checkpoint=opt.ckpt, renderer_checkpoint=opt.r_ckpt, eval_interval=opt.eval_freq)
 
-    if opt.debug:
+    if opt.debug and False:
         x1 = trainer.prepare_source(np.ones((1, 1024, 1024, 3)))
         x2 = trainer.prepare_source(np.ones((1, 1024, 1024, 3))) # 1, 3, 1024, 1024
         t1 = torch.ones(1, 3, 1, 32, 512, 512).to(device)
         t2 = torch.ones(1, 3, 1, 32, 512, 512).to(device)
         trainer.train_step(x1, x2, t1, t2)
+    elif opt.debug and False:
+        t1 = torch.ones(1, 32, 256, 256 * 3).to(device)
+        t2 = torch.ones(1, 32, 256, 256 * 3).to(device)
+        r = [torch.ones(1, 128, 64, 64).to(device),
+             torch.ones(1, 256, 32, 32).to(device),
+             torch.ones(1, 512, 16, 16).to(device)]
+        trainer.train_step(t1, r, t2)
+    elif opt.debug:
+        t1 = torch.ones(1, 32, 512, 512 * 3).to(device)
+        t2 = torch.ones(1, 32, 512, 512 * 3).to(device)
+        r = torch.ones(1, 4, 16, 16).to(device)
+        trainer.train_step(t1, r, t2)
+
 
     with open(opt.path, 'r') as f:
         if opt.start_idx >= 0 and opt.end_idx >= 0 and opt.start_idx < opt.end_idx:
-            all_files = f.read().splitlines()[opt.start_idx:opt.end_idx]
+            all_ids = f.read().splitlines()[opt.start_idx:opt.end_idx]
         else:
-            all_files = f.read().splitlines()
-    all_ids = all_files
+            all_ids = f.read().splitlines()
 
-    train_loader = TriplaneDataset(src_root=opt.src_root, src_data=opt.src_data,
-                                   tgt_root=opt.tgt_root, tgt_data=opt.tgt_data, all_ids=all_ids,
-                                   local_rank=shard, num_shards=num_shards,
-                                   batch_size=opt.batch_size, device=device).dataloader()
+    # train_loader = TriplaneDataset(opt.src_root, opt.src_data, opt.tgt_root, opt.tgt_data, all_ids, device, batch_size=opt.batch_size).dataloader()
+    # train_loader = TriplaneImageDataset(opt, opt.src_root, opt.tgt_data, opt.latent_root, resolution=opt.resolution0, all_ids=all_ids, device=device).dataloader()
+    # train_loader = TriplaneLatentDataset(opt.src_root, opt.tgt_root, opt.tgt_data, opt.latent_root, resolution=opt.resolution0, all_ids=all_ids, device=device, batch_size=opt.batch_size).dataloader()
+    train_loader = TriplaneImagesDataset(opt, opt.src_root, opt.src_data, opt.tgt_data, all_ids, device, opt.resolution0, local_rank=shard, world_size=num_shards).dataloader()
 
     trainer.train(train_loader, max_epochs=opt.num_epochs)

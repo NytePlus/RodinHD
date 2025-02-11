@@ -7,7 +7,7 @@ The module that predicting a dense motion from sparse motion representation give
 from torch import nn
 import torch.nn.functional as F
 import torch
-from Warper.modules.util import Hourglass, make_coordinate_grid, kp2gaussian
+from modules.util import Hourglass, make_coordinate_grid, kp2gaussian
 
 
 class DenseMotionNetwork(nn.Module):

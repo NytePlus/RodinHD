@@ -15,10 +15,12 @@ from pretrained_diffusion.base_train_util import TrainLoop
 import torch
 import clip
 from transformers import CLIPVisionModel
+import multiprocessing
 
 def main():
     args = create_argparser().parse_args()
     dist_util.setup_dist()
+    multiprocessing.set_start_method("spawn")
 
     options = args_to_dict(args, model_and_diffusion_defaults(args.super_res).keys())
     options['ch_mult'] = args.ch_mult

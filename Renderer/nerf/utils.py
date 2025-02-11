@@ -52,7 +52,7 @@ def srgb_to_linear(x):
 
 
 @torch.cuda.amp.autocast(enabled=False)
-def get_rays(poses, intrinsics, H, W, N=-1, error_map=None, patch_size=1):
+def get_rays(poses, intrinsics, H, W, N=-1, error_map=None, patch_size=1, face=None):
     ''' get rays
     Args:
         poses: [B, 4, 4], cam2world
@@ -77,8 +77,22 @@ def get_rays(poses, intrinsics, H, W, N=-1, error_map=None, patch_size=1):
     if N > 0:
         N = min(N, H*W)
 
+        if face is not None:
+            x, y, w, h = face
+
+            pi, pj = custom_meshgrid(torch.arange(h, device=device), torch.arange(w, device=device))
+            offsets = torch.stack([pi.reshape(-1), pj.reshape(-1)], dim=-1) # [p^2, 2]
+            ijs = offsets + torch.tensor([y, x], device=device)
+            inds = ijs[..., 0] * W + ijs[..., 1]
+            if w * h > N:
+                inds = torch.gather(inds, -1, torch.randperm(w * h, device=device)[:N])
+                inds = inds.expand([B, N])
+            elif w * h <= N:
+                inds = torch.cat([inds,
+                                  torch.randint(0, H*W, size=[N - w * h], device=device)])
+                inds = inds.expand([B, N])
         # if use patch-based sampling, ignore error_map
-        if patch_size > 1:
+        elif patch_size > 1:
             # random sample left-top cores.
             # NOTE: this impl will lead to less sampling on the image corner pixels... but I don't have other ideas.
             num_patch = N // (patch_size ** 2)
@@ -197,6 +211,26 @@ def extract_geometry(bound_min, bound_max, resolution, threshold, query_func):
     vertices = vertices / (resolution - 1.0) * (b_max_np - b_min_np)[None, :] + b_min_np[None, :]
     return vertices, triangles
 
+class LpipsLoss(nn.Module):
+    def __init__(self, device='cpu'):
+        super().__init__()
+        self.lpips = lpips.LPIPS(net='alex').train().to(device)
+
+    def to(self, device):
+        super().to(device)
+        self.lpips.to(device)
+
+    def forward(self, output, target):
+        if len(output.shape) == 3:
+            w = round(output.shape[1] ** 0.5)
+            output = output.permute(0, 2, 1).reshape(-1, 3, w, w)
+            target = target.permute(0, 2, 1).reshape(-1, 3, w, w)
+        else:
+            output = output.permute(0, 3, 1, 2)
+            target = target.permute(0, 3, 1, 2)
+
+        loss = self.lpips(output, target)
+        return loss
 
 class PSNRMeter:
     def __init__(self):
@@ -433,9 +467,10 @@ class Trainer(object):
                 print(*args, file=self.log_ptr)
                 self.log_ptr.flush() # write immediately to file
 
-    ### ------------------------------
+    ### ------------------------------	
 
     def train_step(self, triplane, data):
+
         rays_o = data['rays_o'] # [B, N, 3]
         rays_d = data['rays_d'] # [B, N, 3]
 
@@ -636,10 +671,13 @@ class Trainer(object):
 
         # get a ref to error_map
         self.error_map = train_loader._data.error_map
+        if self.opt.finetune and self.opt.cuda_ray:
+            self.model.density_bitfield.fill_(-1)
+            self.evaluate_one_epoch(triplane, valid_loader)
 
         for epoch in range(self.epoch + 1, max_epochs + 1):
             self.epoch = epoch
-
+            # self.evaluate_one_epoch(triplane, valid_loader)
             self.train_one_epoch(triplane, train_loader, iwc_state)
 
             # if self.workspace is not None and self.local_rank == 0:

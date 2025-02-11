@@ -13,6 +13,7 @@ from pretrained_diffusion.script_util import (
     args_to_dict,
     add_dict_to_argparser,)
 import deepspeed
+import multiprocessing
 
 import torch
 import torch.utils.cpp_extension
@@ -21,6 +22,7 @@ def main():
     args = create_argparser().parse_args()
     dist_util.setup_dist()
     torch.cuda.set_device(dist_util.dev())
+    multiprocessing.set_start_method("spawn")
      
     options = args_to_dict(args, model_and_diffusion_defaults(args.super_res).keys())
     print(args)

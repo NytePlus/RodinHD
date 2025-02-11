@@ -2,6 +2,7 @@
 Train a diffusion model on images.
 """
 import argparse
+import multiprocessing
 import numpy as np
 from pretrained_diffusion import dist_util, logger
 from pretrained_diffusion.dataset.upsample_dataset_test import load_data
@@ -20,6 +21,7 @@ import torch.distributed as dist
 
 def main():
     args = create_argparser().parse_args()
+    multiprocessing.set_start_method("spawn")
 
     seed = args.seed
     th.manual_seed(seed)
