@@ -46,7 +46,7 @@ class ImageDataset(Dataset):
         pil_image2 = Image.open(path).resize((self.resolution, self.resolution), Image.LANCZOS)
         image = self.get_input_image_tensor(pil_image2)
         
-        data_dict = {"path": path_base}
+        data_dict = {"path": path_base.split("/")[-1]}
         return image, data_dict
     
     def get_input_image_tensor(self, image):
@@ -101,7 +101,7 @@ for i, (images, data_dicts) in enumerate(tqdm(dataloader)):
   
     with torch.no_grad():  
         latent, feat_list = model.encode_feat(images)
-        
+
         feats_fp16, feats_fp32 = separate_features(feat_list)
 
     for j, latent_sample_fp32 in enumerate(feats_fp32):  

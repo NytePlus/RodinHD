@@ -119,6 +119,7 @@ __global__ void kernel_near_far_from_aabb(
     if (near_y > far_y) swapf(near_y, far_y);
 
     if (near > far_y || near_y > far) {
+        printf("max\n");
         nears[n] = fars[n] = std::numeric_limits<scalar_t>::max();
         return;
     }
@@ -131,6 +132,7 @@ __global__ void kernel_near_far_from_aabb(
     if (near_z > far_z) swapf(near_z, far_z);
 
     if (near > far_z || near_z > far) {
+        printf("max\n");
         nears[n] = fars[n] = std::numeric_limits<scalar_t>::max();
         return;
     }
@@ -140,13 +142,13 @@ __global__ void kernel_near_far_from_aabb(
 
     if (near < min_near) near = min_near;
 
+//     printf("%d %d %f %f\n", sizeof(nears[n]), sizeof(near), nears[n], near);
     nears[n] = near;
     fars[n] = far;
 }
 
 
 void near_far_from_aabb(const at::Tensor rays_o, const at::Tensor rays_d, const at::Tensor aabb, const uint32_t N, const float min_near, at::Tensor nears, at::Tensor fars) {
-
     static constexpr uint32_t N_THREAD = 128;
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(
@@ -402,9 +404,9 @@ __global__ void kernel_march_rays_train(
     //printf("[n=%d] num_steps=%d, near=%f, far=%f, dt=%f, max_steps=%f\n", n, num_steps, near, far, dt_min, (far - near) / dt_min);
 
     // second pass: really locate and write points & dirs
-    // uint32_t point_index = atomicAdd(counter, num_steps);
+//     uint32_t point_index = atomicAdd(counter, num_steps);
 
-    // uint32_t ray_index = atomicAdd(counter + 1, 1);
+//     uint32_t ray_index = atomicAdd(counter + 1, 1);
 
     // make point_index increase with n by Nyte. Allocate fixed position for thread data.
     uint32_t point_index = n * max_steps;
@@ -773,6 +775,7 @@ __global__ void kernel_march_rays(
         const int nz = clamp(0.5 * (z * mip_rbound + 1) * H, 0.0f, (float)(H - 1));
 
         const uint32_t index = level * H3 + __morton3D(nx, ny, nz);
+
         const bool occ = grid[index / 8] & (1 << (index % 8));//Nyte. This fail because of register_buffer assign wrong in TriplaneFit/network/NeRFNetworkPlus.forward
 
         // if occpuied, advance a small step, and write to output

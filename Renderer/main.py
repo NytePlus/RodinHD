@@ -7,7 +7,9 @@ import argparse
 import random
 import concurrent
 
-sys.path.append('../Warper')
+from nerf.utils import LpipsLoss
+
+sys.path.append('../Warpper')
 
 from nerf.provider import NeRFDataset, RayTriplaneRefDataset
 from TriplaneFit.network import NeRFNetwork, NeRFNetworkPlus
@@ -131,7 +133,10 @@ if __name__ == '__main__':
     )
     print(model)
 
-    criterion = torch.nn.MSELoss(reduction='mean')
+    if opt.num_rays == -1:
+        criterion = LpipsLoss(device)
+    else:
+        criterion = torch.nn.MSELoss(reduction='mean')
 
     if opt.test:
         shard=MPI.COMM_WORLD.Get_rank()
@@ -255,11 +260,10 @@ if __name__ == '__main__':
             # I made a mistake again. I save triplane[i] here instead of triplanes[i]. I lose my training checkpoint. Comment by Nyte.
 
         else:
-            scheduler_mlp =  optim.lr_scheduler.LambdaLR(optimizer_mlp, lambda iter: 0.1 ** min(iter / (50*opt.iters), 1))
+            scheduler_mlp = optim.lr_scheduler.LambdaLR(optimizer_mlp, lambda iter: 0.1 ** min(iter / (50*opt.iters), 1))
 
             for epoch in range(opt.out_loop_eps):
                 for subject_id in all_ids:
-                    # torch.cuda.empty_cache()
                     print(subject_id)
 
                     triplane_path = os.path.join(opt.save_dir, subject_id.split('/')[-1]+'.npy')
@@ -292,7 +296,7 @@ if __name__ == '__main__':
                         valid_loader, triplane_ = NeRFDataset(opt,  root_path=os.path.join(opt.data_root, subject_id), save_dir=opt.save_dir, device=device, type='val', downscale=opt.downscale, triplane_resolution=opt.resolution0, triplane_channels=opt.triplane_channels, num_train_frames=opt.num_train_frames).dataloader()
 
                         max_epoch = np.ceil(opt.iters / len(train_loader)).astype(np.int32)
-                        # print(f'outer loop: {epoch} trainer.epoch: {trainer.epoch} \nmax epoch: {max_epoch} len(train loader): {len(train_loader)}')
+                        print(f'outer loop: {epoch} trainer.epoch: {trainer.epoch} \nmax epoch: {max_epoch} len(train loader): {len(train_loader)}')
                         trainer.train(train_loader, valid_loader, max_epoch, triplane, iwc_state)
 
                         print('saving triplane ..')
@@ -301,9 +305,6 @@ if __name__ == '__main__':
                             print(triplane.min(), triplane.mean())
                         print('saving cl_state ..')
                         torch.save(iwc_state, os.path.join(opt.save_dir, train_loader._data.subject_id+'_iwc_state.ckpt'))
-
-                    if opt.out_loop_eps == 1:
-                        del optimizer_triplane, triplane
                 if shard == 0:
                     trainer.save_checkpoint(name=f"decoder_outloop_{epoch:04d}ep", full=False, best=False, remove_old=False)
 

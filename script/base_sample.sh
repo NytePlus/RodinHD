@@ -1,11 +1,12 @@
-data_dir=/path/to/test_file
-output_path=/path/to/save_dir
-base_diffusion_ckpt=/path/to/base_diffusion_ckpt
-render_ckpt=/path/to/render_ckpt
-txt_file=/path/to/test_file_list.txt
-render_cam_path=/path/to/render_cam_path
-latent_root=/path/to/latent_root
-ms_feature_root=/path/to/ms_feature_root
+data_dir=/home/wcc/RodinHD/data/portrait3d_data
+output_path=/home/wcc/RodinHD/data/save_diffusion_3
+base_diffusion_ckpt=/home/wcc/RodinHD/data/save_diffusion_3/checkpoints/model100000.pt
+render_ckpt=/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth
+txt_file=/home/wcc/RodinHD/data/portrait3d_data/fitting_obj_list.txt
+# txt_file=/home/wcc/RodinHD/data/triplane_128/fitting_obj_list.txt
+render_cam_path=/home/wcc/RodinHD/data/portrait3d_data
+latent_root=/home/wcc/RodinHD/data/feature/latent
+ms_feature_root=/home/wcc/RodinHD/data/feature/ms_latent
 num_samples=10
 
 MODEL_FLAGS="--learn_sigma True --uncond_p 0. --image_size 128  --diffusion_steps 1000 --sample_respacing 10 --predict_xstart False --model_path $base_diffusion_ckpt "
@@ -17,4 +18,4 @@ python ../base_sample.py $MODEL_FLAGS  $TRAIN_FLAGS $SAMPLE_FLAGS $DIFFUSION_FLA
 
 cd ..
 cd Renderer
-python main.py $txt_file  $output_path/LR  --workspace $output_path/render_lr --data_root $render_cam_path -O --start_idx 0 --end_idx $num_samples --bound 1.0 --scale 0.6 --dt_gamma 0 --ckpt $render_ckpt  --iters 15000 --lr1 0 --test --inference_real
+python main.py $txt_file  $output_path/LR  --workspace $output_path/render_lr --data_root $render_cam_path -O --start_idx 0 --end_idx $num_samples --bound 1.0 --scale 0.8 --dt_gamma 0 --ckpt $render_ckpt  --iters 15000 --lr1 0 --test

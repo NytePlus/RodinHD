@@ -2,7 +2,7 @@ __pycache__
 data
 pretrain_model
 人脸第一批数据
-.idea
 *.log
-script/models--stabilityai--stable-diffusion-xl-base-1.0
-Warper/weights
+script/vae_model
+Warpper/weights
+data_util

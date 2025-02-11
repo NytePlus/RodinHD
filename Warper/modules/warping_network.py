@@ -7,8 +7,8 @@ keypoint representations x_s and x_d, and employs this flow field to warp the so
 
 from torch import nn
 import torch.nn.functional as F
-from Warper.modules.util import SameBlock2d
-from Warper.modules.dense_motion import DenseMotionNetwork
+from modules.util import SameBlock2d
+from modules.dense_motion import DenseMotionNetwork
 
 
 class WarpingNetwork(nn.Module):
@@ -49,7 +49,7 @@ class WarpingNetwork(nn.Module):
     def forward(self, feature_3d, kp_driving, kp_source):
         if self.dense_motion_network is not None:
             # Feature warper, Transforming feature representation according to deformation and occlusion
-            dense_motion = self.dense_motion_network.forward(
+            dense_motion = self.dense_motion_network(
                 feature=feature_3d, kp_driving=kp_driving, kp_source=kp_source  # Bx32x64x64
             )
             if 'occlusion_map' in dense_motion:
@@ -72,34 +72,6 @@ class WarpingNetwork(nn.Module):
         ret_dct = {
             'occlusion_map': occlusion_map,
             'deformation': deformation,
-            'out': out,
-        }
-
-        return ret_dct
-
-    def _forward(self, feature_3d, kp_driving, kp_source):
-        if self.dense_motion_network is not None:
-            # Feature warper, Transforming feature representation according to deformation and occlusion
-            dense_motion = self.dense_motion_network.forward(
-                feature=feature_3d, kp_driving=kp_driving, kp_source=kp_source  # Bx32x64x64
-            )
-            if 'occlusion_map' in dense_motion:
-                occlusion_map = dense_motion['occlusion_map']  # Bx1x64x64
-            else:
-                occlusion_map = None
-
-            out = dense_motion['deformation']  # (Bx3)x32x512x512
-
-            bs, _, _, c, h, w = feature_3d.shape    # Bx3x1x32x512x512
-            out = out.reshape(bs*3, c, h, w)  # -> (Bx3)x32x512x512
-            out = self.third(out)  # -> (Bx3)x32x512x512
-            out = self.fourth(out)  # -> (Bx3)x32x512x512
-
-            if self.flag_use_occlusion_map and (occlusion_map is not None):
-                out = out * occlusion_map
-
-        ret_dct = {
-            'occlusion_map': occlusion_map,
             'out': out,
         }
 
