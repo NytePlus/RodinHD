@@ -418,9 +418,8 @@ class Trainer(object):
 
 
     def __del__(self):
-        if self.log_ptr: 
+        if self.log_ptr:
             self.log_ptr.close()
-
 
 
     def log(self, *args, **kwargs):
