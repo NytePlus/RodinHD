@@ -6,7 +6,7 @@ tgt_root=/home/wcc/RodinHD/data/save_triplane2
 tgt_data=/home/wcc/RodinHD/data/portrait3dexp_data
 fitting_obj_list=/home/wcc/RodinHD/data/portrait3d_data/fitting_obj_list.txt
 ckpt_dir=/home/wcc/RodinHD/data/save_wraping_module2
-python main.py \
+mpirun -np 6 python main.py \
     ${fitting_obj_list} \
     --src_root ${src_root} --src_data ${src_data}\
     --tgt_root ${tgt_root} --tgt_data ${tgt_data}\

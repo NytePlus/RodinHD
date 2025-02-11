@@ -1,8 +1,12 @@
 import os
+import sys
 import torch
 import argparse
 import numpy as np
 
+sys.path.append('../')
+
+from Renderer import dist_util
 from torch import optim, nn
 from mpi4py import MPI
 from Renderer.TriplaneFit.network import NeRFNetwork
@@ -63,7 +67,10 @@ if __name__ == "__main__":
 
     opt = parser.parse_args()
     seed_everything(opt.seed)
-    device='cuda:1'
+
+    dist_util.setup_dist()
+    print('setup done.')
+    device = dist_util.dev()
 
     warper = WarpingNetwork(
         num_kp = 21,
@@ -87,11 +94,15 @@ if __name__ == "__main__":
         backbone = 'convnextv2_tiny'
     )
 
+    shard = MPI.COMM_WORLD.Get_rank()
+    num_shards = MPI.COMM_WORLD.Get_size()
+
     criterion = nn.MSELoss(reduction='mean')
     optimizer = torch.optim.Adam(warper.parameters(), lr=opt.lr0, betas=(0.9, 0.99), eps=1e-15)
+    optimizer_me = torch.optim.Adam(motion_extractor.parameters(), lr=opt.lr0, betas=(0.9, 0.99), eps=1e-15)
 
-    scheduler = lambda optimizer: optim.lr_scheduler.LambdaLR(optimizer, lambda iter: 0.5 ** min(iter / opt.num_epochs, 1))
-    trainer = Trainer('snapshot_4b', opt, warper, motion_extractor, local_rank=0, world_size=1, device=device, workspace=opt.workspace, optimizer=optimizer, criterion=criterion, fp16=opt.fp16, lr_scheduler=scheduler, scheduler_update_every_step=False, metrics=[PSNRMeter()], use_checkpoint=opt.ckpt, eval_interval=opt.eval_freq)
+    scheduler = lambda optimizer: optim.lr_scheduler.LambdaLR(optimizer, lambda iter: 0.01 ** min(iter / opt.num_epochs, 1))
+    trainer = Trainer('snapshot_3', opt, warper, motion_extractor, local_rank=shard, world_size=num_shards, device=device, workspace=opt.workspace, optimizer=optimizer, optimizer_me=optimizer_me, criterion=criterion, fp16=opt.fp16, lr_scheduler=scheduler, scheduler_update_every_step=False, metrics=[PSNRMeter()], use_checkpoint=opt.ckpt, eval_interval=opt.eval_freq)
 
     if opt.debug:
         x1 = trainer.prepare_source(np.ones((1, 1024, 1024, 3)))
@@ -105,14 +116,11 @@ if __name__ == "__main__":
             all_files = f.read().splitlines()[opt.start_idx:opt.end_idx]
         else:
             all_files = f.read().splitlines()
-
-    shard = MPI.COMM_WORLD.Get_rank()
-    num_shards = MPI.COMM_WORLD.Get_size()
-    all_ids = all_files[shard:][::num_shards]
-    print(f'shard {shard}/{num_shards} processing {len(all_ids)} avatars.')
+    all_ids = all_files
 
     train_loader = TriplaneDataset(src_root=opt.src_root, src_data=opt.src_data,
                                    tgt_root=opt.tgt_root, tgt_data=opt.tgt_data, all_ids=all_ids,
+                                   local_rank=shard, num_shards=num_shards,
                                    batch_size=opt.batch_size, device=device).dataloader()
 
     trainer.train(train_loader, max_epochs=opt.num_epochs)
