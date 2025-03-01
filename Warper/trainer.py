@@ -32,17 +32,19 @@ def seed_everything(seed):
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
 
-class Trainer(_Trainer):
+class Trainer():
     def __init__(self,
                  name, # name of this experiment
                  opt, # extra conf
                  renderer, # nerf renderer
                  warper, # warping module
                  motion_extractor, # motion extractor
+                 discriminator, # gan discriminator
                  criterion=None, # loss function, if None, assume inline implementation in train_step
                  lr_scheduler=None, # scheduler
                  optimizer=None, # wrapping module optimizer
                  optimizer_me=None, # motion extracter optimizer
+                 optimizer_d=None, # discriminator optimizer
                  metrics=[], # metrics for evaluation, if None, use val_loss to measure performance, else use the first metric.
                  local_rank=0, # which GPU am I
                  world_size=1, # total num of GPUs
@@ -61,7 +63,7 @@ class Trainer(_Trainer):
                  scheduler_update_every_step=False, # whether to call scheduler.step() after every train step
                  input_shape=[256,256], # input shape of source image
                  ):
-        super().__init__(name, opt, renderer, criterion, fp16=fp16, use_checkpoint = renderer_checkpoint, local_rank = local_rank, world_size = world_size, device = device, workspace=workspace)
+        # super().__init__(name, opt, renderer, criterion, fp16=fp16, use_checkpoint = renderer_checkpoint, local_rank = local_rank, world_size = world_size, device = device, workspace=workspace)
 
         self.name = name
         self.opt = opt
@@ -85,6 +87,7 @@ class Trainer(_Trainer):
         self.console = Console()
         self.optimizer = optimizer
         self.optimizer_me = optimizer_me
+        self.optimizer_d = optimizer_d
         self.scheduler_fn = lr_scheduler
         self.input_shape = input_shape
 
@@ -97,11 +100,33 @@ class Trainer(_Trainer):
         else:
             self.warper = self._warper = warper
 
+        self.discriminator = discriminator
+        if discriminator is not None:
+            discriminator.to(self.device)
+            if self.world_size > 1:
+                discriminator = torch.nn.SyncBatchNorm.convert_sync_batchnorm(discriminator)
+                self._discriminator = torch.nn.parallel.DistributedDataParallel(discriminator, device_ids=[local_rank],
+                                                                         find_unused_parameters=False)
+                self.discriminator = self._discriminator.module
+            else:
+                self.discriminator = self._discriminator = discriminator
+
+            self.adversarial_loss = nn.BCEWithLogitsLoss()
+
         current_dir = os.path.dirname(os.path.abspath(__file__))
+        self.motion_extractor = motion_extractor
         if motion_extractor is not None:
             motion_extractor.to(self.device)
+
+            self.scaler_me = torch.cuda.amp.GradScaler(enabled=self.fp16)
+            if self.world_size > 1:
+                motion_extractor = torch.nn.SyncBatchNorm.convert_sync_batchnorm(motion_extractor)
+                self._motion_extractor = torch.nn.parallel.DistributedDataParallel(motion_extractor, device_ids=[local_rank],
+                                                                         find_unused_parameters=False)
+                self.motion_extractor = self._motion_extractor.module
+            else:
+                self.motion_extractor = self._motion_extractor = motion_extractor
             motion_extractor.load_pretrained(current_dir + '/weights/motion_extractor.pth', device)
-            self.motion_extractor = motion_extractor
 
         if isinstance(criterion, nn.Module):
             criterion.to(self.device)
@@ -117,7 +142,7 @@ class Trainer(_Trainer):
             self.best_path = f"{self.ckpt_path}/{self.name}.pth"
             os.makedirs(self.ckpt_path, exist_ok=True)
 
-            self.valid_path = os.path.join(self.workspace, 'validation')
+            self.valid_path = os.path.join(self.workspace, f'validation/{self.name}')
             os.makedirs(self.valid_path, exist_ok=True)
 
         self.log(f'[INFO] #parameters: {sum([p.numel() for p in warper.parameters() if p.requires_grad])}')
@@ -125,19 +150,20 @@ class Trainer(_Trainer):
         if use_checkpoint == "latest":
             checkpoint_list = sorted(glob.glob(f'{self.ckpt_path}/{self.name}_ep*.pth'))
             if checkpoint_list:
-                checkpoint = checkpoint_list[-1]
-                ret = self.warper.load_state_dict(torch.load(checkpoint)["model"], strict=True)
-                self.log(f"[INFO] Latest checkpoint is {checkpoint}, ret: {ret}")
+                state_dict = torch.load(checkpoint_list[-1])
+                ret = self.warper.load_state_dict(state_dict["model"], strict=True)
+                ret2 = self.discriminator.load_state_dict(state_dict["model_d"], strict=True) if discriminator else None
+                self.global_step = state_dict['global_step']
+                self.log(f"[INFO] Latest checkpoint is {checkpoint_list[-1]}, ret: {ret} {ret2}")
             else:
                 self.log("[WARN] No checkpoint found, model randomly initialized.")
 
-        if parse_version(torch.__version__) < parse_version("1.12.0"):
+        if parse_version(torch.__version__) < parse_version("1.14.0"):
             self.scaler = torch.cuda.amp.GradScaler(enabled=self.fp16)
         else:
             self.scaler = torch.amp.GradScaler('cuda', enabled=self.fp16)
 
         self.epoch = 0
-        self.global_step = 0
         self.local_step = 0
         self.stats = {
             "loss": [],
@@ -157,7 +183,6 @@ class Trainer(_Trainer):
             self.best_mode = 'min'
 
         self.error_map = None
-
 
     def log(self, *args, **kwargs):
         if self.local_rank == 0:
@@ -233,9 +258,9 @@ class Trainer(_Trainer):
                         metric.update(preds, truths)
 
                     # save image
-                    save_path = os.path.join(self.workspace, 'validation', f'{loader._data.subject_id}',
+                    save_path = os.path.join(self.workspace, f'validation/{self.name}', f'{loader._data.subject_id}',
                                              f'{name}_{self.local_step:04d}_rgb.png')
-                    save_path_depth = os.path.join(self.workspace, 'validation', f'{loader._data.subject_id}',
+                    save_path_depth = os.path.join(self.workspace, f'validation/{self.name}', f'{loader._data.subject_id}',
                                                    f'{name}_{self.local_step:04d}_depth.png')
 
                     # self.log(f"==> Saving validation image to {save_path}")
@@ -291,20 +316,19 @@ class Trainer(_Trainer):
         flag_refine_info: whether to trandform the pose to degrees and the dimention of the reshape
         return: A dict contains keys: 'pitch', 'yaw', 'roll', 't', 'exp', 'scale', 'kp'
         """
-        with torch.no_grad(), self.inference_ctx():
-            kp_info = self.motion_extractor(x)
+        kp_info = self.motion_extractor(x)
 
-            if self.fp16:
-                # float the dict
-                for k, v in kp_info.items():
-                    if isinstance(v, torch.Tensor):
-                        kp_info[k] = v.float()
+        if self.fp16:
+            # float the dict
+            for k, v in kp_info.items():
+                if isinstance(v, torch.Tensor):
+                    kp_info[k] = v.float()
 
         flag_refine_info: bool = kwargs.get('flag_refine_info', True)
         if flag_refine_info:
-            bs = kp_info['kp'].shape[0]
-            kp_info['kp'] = kp_info['kp'].reshape(bs, -1, 3)  # BxNx3
-            kp_info['exp'] = kp_info['exp'].reshape(bs, -1, 3)  # BxNx3
+            bs, num_kpx2 = kp_info['kp_2d'].shape
+            # kp_info['kp'] = kp_info['kp'].reshape(bs, -1, 3)
+            kp_info['kp_2d'] = torch.stack(torch.split(kp_info['kp_2d'].reshape(bs, -1, 2), num_kpx2 // 6, dim=1), dim=0)
 
         return kp_info
 
@@ -335,11 +359,19 @@ class Trainer(_Trainer):
         x = x.to(self.device)
         return x
 
+    def liveportrait_train_step(self, src_photo, ref_photo, src_triplane, tgt_triplane):
+        warpped_triplane = self.warper.execute(src_triplane, src_photo, ref_photo)
+
+        loss = self.criterion(warpped_triplane, tgt_triplane).mean()
+        ref_loss = self.criterion(src_triplane, tgt_triplane).mean()
+
+        return warpped_triplane, loss, ref_loss
+
     def end2end_train_step(self, src_photo, ref_photo, src_triplane, tgt_triplane):
         bs, _, _, c, h, w = src_triplane.shape
 
-        ref_kp = self.get_kp_info(ref_photo)['kp'] # BxNx3
-        src_kp = self.get_kp_info(src_photo)['kp'] # BxNx3
+        ref_kp = self.get_kp_info(ref_photo)['kp_2d'] # BxNx3
+        src_kp = self.get_kp_info(src_photo)['kp_2d'] # BxNx3
 
         wrapped_dict = self.warper(src_triplane, ref_kp, src_kp) # B×3×1×32×512×512
         warpped_triplane = wrapped_dict['out'].view(bs, 3, 1, c, h, w)
@@ -353,8 +385,8 @@ class Trainer(_Trainer):
     def train_step(self, src_photo, ref_photo, src_triplane, img_loader):
         bs, _3, _1, c, h, w = src_triplane.shape
 
-        ref_kp = self.get_kp_info(ref_photo)['kp']  # BxNx3
-        src_kp = self.get_kp_info(src_photo)['kp']  # BxNx3
+        ref_kp = self.get_kp_info(ref_photo)['kp_2d']  # BxNx3
+        src_kp = self.get_kp_info(src_photo)['kp_2d']  # BxNx3
 
         for i, data in enumerate(img_loader):
             self.local_step += 1
@@ -364,7 +396,7 @@ class Trainer(_Trainer):
                 for metric in self.metrics:
                     metric.clear()
 
-            if parse_version(torch.__version__) >= parse_version("1.12.0"):
+            if parse_version(torch.__version__) >= parse_version("1.14.0"):
                 with torch.amp.autocast(device_type='cuda', enabled=self.fp16):
                     wraped_dict = self.warper(src_triplane, ref_kp, src_kp)  # B×3×1×32×512×512
                     warped_triplane = wraped_dict['out'].view(bs, 3, 1, c, h, w)
@@ -471,11 +503,50 @@ class Trainer(_Trainer):
 
     def aborted_train_step(self, src_triplane, tgt_triplane, latent):
         with torch.cuda.amp.autocast(enabled=self.fp16):
-            delta = self.warper(src_triplane, latent)
-            warped_triplane = src_triplane + delta
+            delta, mask = self.warper(src_triplane, latent)
+            warped_triplane = delta # * mask # (3, 32, 512, 1536)
+
+            # test
+            # mask_gt = (torch.norm(tgt_triplane - src_triplane, dim=1) > 0.5).unsqueeze(1).type(src_triplane.dtype)
+            # tgt_triplane = tgt_triplane * mask_gt + src_triplane * (1 - mask_gt)
+            # mask = (mask > 0.5).type(src_triplane.dtype)
+            # warped_triplane = src_triplane + delta * mask
+            #
+            # loss = self.criterion(warped_triplane * mask_gt, tgt_triplane * mask_gt) + self.criterion(mask, mask_gt)
+            #
+            # return warped_triplane, loss, self.criterion(src_triplane, tgt_triplane), self.criterion(warped_triplane, tgt_triplane)
         return warped_triplane, self.criterion(warped_triplane, tgt_triplane), self.criterion(src_triplane, tgt_triplane)
 
-    def end2end_train_one_epoch(self, loader):
+    def gan_train_step(self, src_triplane, tgt_triplane, latent, lambd = 0.7):
+        torch.autograd.set_detect_anomaly(True)
+        with torch.cuda.amp.autocast(enabled=self.fp16):
+            delta, mask = self.warper(src_triplane, latent)
+            warped_triplane = delta * mask # (bs, 32, 512, 1536)
+
+            real_labels = torch.ones(src_triplane.shape[0], 1).to(self.device)
+            fake_labels = torch.zeros(src_triplane.shape[0], 1).to(self.device)
+
+        for _ in range(15):
+            real_loss = self.adversarial_loss(self.discriminator(tgt_triplane), real_labels)
+            fake_loss = self.adversarial_loss(self.discriminator(warped_triplane.detach()), fake_labels)
+
+            d_loss = (real_loss + fake_loss) / 2
+
+            self.optimizer_d.zero_grad()
+            self.scaler.scale(d_loss).backward()
+            self.scaler.step(self.optimizer_d)
+            self.scaler.update()
+
+        mse_loss = self.criterion(warped_triplane, tgt_triplane)
+        loss = self.adversarial_loss(self.discriminator(warped_triplane), real_labels) + lambd * mse_loss
+        self.scaler.scale(loss).backward()
+
+        self.scaler.step(self.optimizer)
+        self.scaler.update()
+
+        return warped_triplane, mse_loss, d_loss
+
+    def train_one_epoch(self, loader):
         self.local_step = 0
 
         total_loss = 0
@@ -487,10 +558,12 @@ class Trainer(_Trainer):
                              bar_format='{desc}: {percentage:3.0f}% {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]')
 
         self.warper.train()
-        if self.world_size > 1:
-            loader.sampler.set_epoch(self.epoch)
+        if self.motion_extractor:
+            self.motion_extractor.train()
+        local_batch_size = 0
 
-        for src_x_np, ref_x_np, src_t, tgt_t, names in loader:
+        # for i, (src_x_np, ref_x_np, src_t, tgt_t, names) in enumerate(loader):
+        for i, (src_t, tgt_t, latent, names) in enumerate(loader):
             self.local_step += 1
             self.global_step += 1
 
@@ -501,29 +574,44 @@ class Trainer(_Trainer):
             self.optimizer.zero_grad()
             if self.optimizer_me:
                 self.optimizer_me.zero_grad()
-            src_x = self.prepare_source(src_x_np).to(self.device)
-            ref_x = self.prepare_source(ref_x_np).to(self.device)
+            # src_x = self.prepare_source(src_x_np).to(self.device)
+            # ref_x = self.prepare_source(ref_x_np).to(self.device)
 
             # union
-            # triplane = triplane.to(self.device)
-            # latent = latent.to(self.device)
+            src_t = src_t.to(self.device)
+            tgt_t = tgt_t.to(self.device)
+            if isinstance(latent, (tuple, list)):
+                latent = [ls.to(self.device) for ls in latent]
+            else:
+                latent = latent.to(self.device)
 
+            # with torch.cuda.amp.autocast(enabled=self.fp16):
+            #     warped_t, loss, ref_loss = self.end2end_train_step(src_x, ref_x, src_t, tgt_t)
+            # with torch.cuda.amp.autocast(enabled=self.fp16):
+            #     warped_t, loss, ref_loss = self.liveportrait_train_step(src_x, ref_x, src_t, tgt_t)
             with torch.cuda.amp.autocast(enabled=self.fp16):
-                warped_t, loss, ref_loss = self.train_step(src_x, ref_x, src_t, tgt_t)
+                warped_t, loss, ref_loss = self.aborted_train_step(src_t, tgt_t, latent)
+                # warped_t, loss, ref_loss = self.gan_train_step(src_t, tgt_t, latent)
 
-            for t, n in zip(warped_t, names):
-                with open(os.path.join(self.workspace, 'validation', n), 'wb') as f:
-                    np.save(f, t.detach().cpu().numpy())
+            if self.global_step % 1000 == i:
+                for t, n in zip(warped_t, names):
+                    with open(os.path.join(self.workspace, f'validation/{self.name}', n), 'wb') as f:
+                        np.save(f, torch.stack(t.split(t.shape[-2], dim = -1)).detach().cpu().numpy())
 
-            self.scaler.scale(loss).backward()
-            self.scaler.step(self.optimizer)
-            if self.optimizer_me:
-                self.scaler.step(self.optimizer_me)
-            self.scaler.update()
-            # aborted
-            # warped_t, loss, ref_loss = self.train_step(src_t, tgt_t, latent)
-            # for i, id in enumerate(ids):
-            #     torch.save(warped_t[i], os.path.join(self.workspace, id + ".pt"))
+            if self.optimizer_d is None:
+                self.scaler.scale(loss).backward()
+                torch.nn.utils.clip_grad_norm_(self.warper.parameters(), max_norm=5.0)
+
+                # if self.local_rank == 0:
+                #     for name, param in self.warper.named_parameters():
+                #         if param.grad is not None:
+                #             print(f"Layer: {name} | {param.type()} gradient: [{param.grad.min().item()}, {param.grad.max().item()}]")
+
+                self.scaler.step(self.optimizer)
+                if self.optimizer_me:
+                    torch.nn.utils.clip_grad_norm_(self.motion_extractor.parameters(), max_norm=5.0)
+                    self.scaler.step(self.optimizer_me)
+                self.scaler.update()
 
             loss_val = loss.item()
             total_loss += loss_val
@@ -537,7 +625,6 @@ class Trainer(_Trainer):
                         metric.update(warped_t, tgt_t)
 
                 if self.use_tensorboardX:
-                    self.writer.add_scalar(f'train/loss', loss_val, self.global_step)
                     self.writer.add_scalar(f'train/lr', self.optimizer.param_groups[0]['lr'], self.global_step)
 
                 if self.scheduler_update_every_step:
@@ -575,7 +662,7 @@ class Trainer(_Trainer):
 
         self.log(f"==> Finished Epoch {self.epoch}.")
 
-    def train_one_epoch(self, loader):
+    def aborted_train_one_epoch(self, loader):
         self.local_step = 0
 
         self.total_loss = 0
@@ -593,7 +680,7 @@ class Trainer(_Trainer):
             src_t = src_t.to(self.device)
 
 
-            if parse_version(torch.__version__) >= parse_version("1.12.0"):
+            if parse_version(torch.__version__) >= parse_version("1.14.0"):
                 with torch.amp.autocast(device_type='cuda', enabled=self.fp16):
                     warped_t, average_loss = self.train_step(src_x, ref_x, src_t, img_loader)
             else:
@@ -669,6 +756,8 @@ class Trainer(_Trainer):
         if not best:
 
             state['model'] = self.warper.state_dict()
+            if self.discriminator:
+                state['model_d'] = self.discriminator.state_dict()
 
             file_path = f"{self.ckpt_path}/{name}.pth"
 

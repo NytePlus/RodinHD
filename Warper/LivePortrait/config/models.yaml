@@ -1,0 +1,56 @@
+model_params:
+  appearance_feature_extractor_params: # the F in the paper
+    image_channel: 24
+    block_expansion: 64
+    num_down_blocks: 2
+    max_features: 512
+    reshape_channel: 32
+    reshape_depth: 16
+    num_resblocks: 6
+  motion_extractor_params: # the M in the paper
+    num_kp: 21
+    backbone: convnextv2_tiny
+  warping_module_params: # the W in the paper
+    num_kp: 21
+    block_expansion: 64
+    max_features: 512
+    num_down_blocks: 2
+    reshape_channel: 32
+    estimate_occlusion_map: True
+    dense_motion_params:
+      block_expansion: 32
+      max_features: 1024
+      num_blocks: 5
+      reshape_depth: 16
+      compress: 4
+  spade_generator_params: # the G in the paper
+    upscale: 1 # represents upsample factor 256x256 -> 512x512
+    block_expansion: 64
+    max_features: 512
+    num_down_blocks: 2
+    output_channels: 24
+  stitching_retargeting_module_params: # the S in the paper
+    stitching:
+      input_size: 126 # (21*3)*2
+      hidden_sizes: [128, 128, 64]
+      output_size: 65 # (21*3)+2(tx,ty)
+    lip:
+      input_size: 65 # (21*3)+2
+      hidden_sizes: [128, 128, 64]
+      output_size: 63 # (21*3)
+    eye:
+      input_size: 66 # (21*3)+3
+      hidden_sizes: [256, 256, 128, 128, 64]
+      output_size: 63 # (21*3)
+modified_layers:
+  appearance_feature_extractor: ['first.conv.weight', 'first.conv.bias']
+  motion_extractor: []
+  warping_module: []
+  spade_generator: []
+  stitching_retargeting_module: []
+freeze_layers:
+  appearance_feature_extractor: []#['second', 'resblocks_3d']
+  motion_extractor: ['detector']
+  warping_module: [] #['dense_motion_network', 'third', 'fourth']
+  spade_generator: [] #['fc', 'G_middle_0', 'G_middle_1', 'G_middle_2', 'G_middle_3', 'G_middle_4', 'G_middle_5']
+  stitching_retargeting_module: ['']

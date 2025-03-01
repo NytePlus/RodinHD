@@ -30,3 +30,4 @@ transformers==4.44.2
 trimesh==4.4.3
 xformers #==0.0.28.post1
 rembg[GPU]
+tyro

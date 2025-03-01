@@ -254,7 +254,7 @@ def circle_poses(size, device, radius=1, theta_range=[np.pi/3, 2*np.pi/3], phi_r
 
 
 class NeRFDataset:
-    def __init__(self, opt, root_path, save_dir,  device, num_train_frames=300, type='train', downscale=1, n_test=10, triplane_resolution=512, triplane_channels=32):
+    def __init__(self, opt, root_path, save_dir,  device, num_train_frames=300, type='train', downscale=1, n_test=10, triplane_resolution=512, triplane_channels=32, face=False):
         super().__init__()
         
         self.opt = opt
@@ -273,6 +273,7 @@ class NeRFDataset:
 
         self.training = self.type in ['train', 'all', 'trainval']
         self.num_rays = self.opt.num_rays if self.training else -1
+        self.face = face
 
         self.rand_pose = opt.rand_pose
         self.triplane_resolution = triplane_resolution
@@ -363,6 +364,7 @@ class NeRFDataset:
                 results = list(executor.map(load_data, frames))  
             
             self.poses, self.images, self.img_nps = zip(*results)
+            self.face_box = self.get_face_box(self.img_nps[0])
             if self.type == 'train':
                 visualize_poses(self.poses, os.path.join(self.save_dir, f'gt_poses.glb'))
         self.poses = torch.from_numpy(np.stack(self.poses, axis=0)) # [N, 4, 4]
@@ -424,7 +426,17 @@ class NeRFDataset:
         faces = face_cascade.detectMultiScale(gray_image, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
 
         if len(faces) > 0:
-            return faces[0]
+            x, y, w, h = faces[0]
+
+            size = max(w, h)
+            x = x + (w - size) // 2
+            y = y + (h - size) // 2
+
+            x = max(0, x)
+            y = max(0, y)
+            size = min(size, image.shape[1] - x, image.shape[0] - y)  # 防止超出图像边界
+
+            return (x, y, size, size)
         return None
 
     def collate(self, index):
@@ -452,9 +464,8 @@ class NeRFDataset:
  
         error_map = None if self.error_map is None else self.error_map[index]
 
-        if self.img_nps is not None and self.face:
-            face_box = self.get_face_box(self.img_nps[index[0]])
-            rays = get_rays(poses, self.intrinsics, self.H, self.W, self.num_rays, error_map, self.opt.patch_size, face_box)
+        if self.face:
+            rays = get_rays(poses, self.intrinsics, self.H, self.W, self.num_rays, error_map, self.opt.patch_size, self.face_box)
         else:
             rays = get_rays(poses, self.intrinsics, self.H, self.W, self.num_rays, error_map, self.opt.patch_size)
 
@@ -468,22 +479,22 @@ class NeRFDataset:
         if self.images is not None:
             images = self.images[index].to(self.device) # [B, H, W, 3/4]
             if self.training:
-                if index[0] == 0:
-                    # Nyte's debug
-                    B, H, W, C = images.shape
-                    N = rays['inds'].shape[1]  # 假设 rays['inds'] 的形状是 [B, N]
-
-                    images_flat = images.view(B, -1, C)
-                    gathered_images = torch.gather(images_flat, 1, torch.stack(C * [rays['inds']], -1))  # [B, N, C]
-                    white_background = torch.ones(B, H * W, C).to(self.device)
-                    if images.dtype == torch.uint8:
-                        white_background *= 255
-
-                    white_background.scatter_(1, torch.stack(C * [rays['inds']], -1), gathered_images)
-                    final_images = white_background.view(B, H, W, C)
-
-                    vutils.save_image(images.permute(0, 3, 1, 2), '/home/wcc/RodinHD/data_util/original_images.png')
-                    vutils.save_image(final_images.permute(0, 3, 1, 2), '/home/wcc/RodinHD/data_util/gathered_images.png')
+            #     if index[0] == 0:
+            #         # Nyte's debug
+            #         B, H, W, C = images.shape
+            #         N = rays['inds'].shape[1]  # 假设 rays['inds'] 的形状是 [B, N]
+            #
+            #         images_flat = images.view(B, -1, C)
+            #         gathered_images = torch.gather(images_flat, 1, torch.stack(C * [rays['inds']], -1))  # [B, N, C]
+            #         white_background = torch.ones(B, H * W, C).to(self.device)
+            #         if images.dtype == torch.uint8:
+            #             white_background *= 255
+            #
+            #         white_background.scatter_(1, torch.stack(C * [rays['inds']], -1), gathered_images)
+            #         final_images = white_background.view(B, H, W, C)
+            #
+            #         vutils.save_image(images.permute(0, 3, 1, 2), '/home/wcc/RodinHD/data_util/original_images.png')
+            #         vutils.save_image(final_images.permute(0, 3, 1, 2), '/home/wcc/RodinHD/data_util/gathered_images.png')
                     # end debug
 
                 C = images.shape[-1]

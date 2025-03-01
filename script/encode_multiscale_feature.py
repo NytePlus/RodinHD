@@ -42,6 +42,7 @@ class ImageDataset(Dataset):
     def __getitem__(self, idx):
         path_base = self.local_images[idx]
         path = os.path.join(self.root, path_base, "img_proc_fg_000000.png")
+        # path = os.path.join(self.root, path_base, "0000.png")
        
         pil_image2 = Image.open(path).resize((self.resolution, self.resolution), Image.LANCZOS)
         image = self.get_input_image_tensor(pil_image2)

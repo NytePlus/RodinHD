@@ -234,7 +234,7 @@ class Decoder(nn.Module):
     Hourglass Decoder
     """
 
-    def __init__(self, block_expansion, in_features, num_blocks=3, max_features=256):
+    def __init__(self, block_expansion, in_features, num_blocks=3, max_features=256, out_features=22):
         super(Decoder, self).__init__()
 
         up_blocks = []
@@ -246,9 +246,10 @@ class Decoder(nn.Module):
 
         self.up_blocks = nn.ModuleList(up_blocks)
         self.out_filters = block_expansion + in_features
+        self.output = out_features
 
-        self.conv = nn.Conv2d(in_channels=self.out_filters, out_channels=self.out_filters, kernel_size=3, padding=1)
-        self.norm = nn.BatchNorm2d(self.out_filters, affine=True)
+        self.conv = nn.Conv2d(in_channels=self.out_filters, out_channels=self.output, kernel_size=3, padding=1)
+        self.norm = nn.BatchNorm2d(self.output, affine=True)
 
     def forward(self, x):
         out = x.pop()
@@ -268,10 +269,10 @@ class Hourglass(nn.Module):
     Hourglass architecture.
     """
 
-    def __init__(self, block_expansion, in_features, num_blocks=3, max_features=256):
+    def __init__(self, block_expansion, in_features, num_blocks=3, max_features=256, out_features=22):
         super(Hourglass, self).__init__()
         self.encoder = Encoder(block_expansion, in_features, num_blocks, max_features)
-        self.decoder = Decoder(block_expansion, in_features, num_blocks, max_features)
+        self.decoder = Decoder(block_expansion, in_features, num_blocks, max_features, out_features)
         self.out_filters = self.decoder.out_filters
 
     def forward(self, x):

@@ -45,7 +45,7 @@ class BaseDiffusion(nn.Module):
     def forward(self, xt, timesteps, ref=None, vae_ms_feature=None):
         pred = self.decoder(xt, timesteps, ref, vae_ms_feature)
         return pred
-
+# todo
 class BaseMultiscaleVAELatentUNet(UNetModel):
     def __init__(
         self,

@@ -13,7 +13,10 @@ from modules.util import Hourglass, make_coordinate_grid, kp2gaussian
 class DenseMotionNetwork(nn.Module):
     def __init__(self, block_expansion, num_blocks, max_features, num_kp, feature_channel, reshape_depth, compress, down_scale, estimate_occlusion_map=True):
         super(DenseMotionNetwork, self).__init__()
-        self.hourglass = Hourglass(block_expansion=block_expansion, in_features=(num_kp+1)*compress, max_features=max_features, num_blocks=num_blocks)  # ~60+G
+        self.hourglass = Hourglass(block_expansion=block_expansion, in_features=(num_kp+1)*compress, max_features=max_features, num_blocks=num_blocks)
+        self.hourglass_xy = Hourglass(block_expansion=block_expansion, in_features=reshape_depth, out_features=num_kp+1, max_features=max_features, num_blocks=num_blocks)
+        self.hourglass_yz = Hourglass(block_expansion=block_expansion, in_features=reshape_depth, out_features=num_kp+1, max_features=max_features, num_blocks=num_blocks)
+        self.hourglass_xz = Hourglass(block_expansion=block_expansion, in_features=reshape_depth, out_features=num_kp+1, max_features=max_features, num_blocks=num_blocks)  # ~60+G
         self.down_scale = down_scale
 
         self.mask = nn.Conv2d(self.hourglass.out_filters, num_kp + 1, kernel_size=7, padding=3)  # 65G! NOTE: computation cost is large
@@ -42,6 +45,43 @@ class DenseMotionNetwork(nn.Module):
         kp_source_xy = kp_source[..., : 2].view(bs, self.num_kp, 1, 1, 2)
         kp_source_yz = kp_source[..., 1 :].view(bs, self.num_kp, 1, 1, 2)
         kp_source_xz = kp_source[..., ::2].view(bs, self.num_kp, 1, 1, 2)
+
+        # NOTE: there lacks an one-order flow
+        driving_to_source_xy = xy_grid - kp_driving_xy + kp_source_xy
+        driving_to_source_yz = yz_grid - kp_driving_yz + kp_source_yz
+        driving_to_source_xz = xz_grid - kp_driving_xz + kp_source_xz  # (bs, num_kp, h, w, 2)
+
+        # adding background feature
+        xy_grid = xy_grid.repeat(bs, 1, 1, 1, 1)
+        yz_grid = yz_grid.repeat(bs, 1, 1, 1, 1)
+        xz_grid = xz_grid.repeat(bs, 1, 1, 1, 1)
+
+        sparse_motions_xy = torch.cat([xy_grid, driving_to_source_xy], dim=1)
+        sparse_motions_yz = torch.cat([yz_grid, driving_to_source_yz], dim=1)
+        sparse_motions_xz = torch.cat([xz_grid, driving_to_source_xz], dim=1)  # (bs, 1+num_kp, h, w, 2)
+
+        del xy_grid, yz_grid, xz_grid, driving_to_source_xy, driving_to_source_yz, driving_to_source_xz
+
+        sparse_motions = torch.stack([sparse_motions_xy, sparse_motions_yz, sparse_motions_xz]).permute(1, 0, 2, 3, 4, 5)
+        del sparse_motions_xy, sparse_motions_yz, sparse_motions_xz
+
+        return sparse_motions.contiguous()
+
+    def create_sparse_motions2(self, feature, kp_driving, kp_source):
+        bs, _, _, c, h, w = feature.shape # (bs, 3, 1, 32, 512, 512)
+        xy_grid, yz_grid, xz_grid = make_coordinate_grid((h, h, w), ref=kp_source)  # 3 * (512, 512, 2)
+
+        xy_grid = xy_grid.view(1, 1, h, w, 2)
+        yz_grid = yz_grid.view(1, 1, h, h, 2)
+        xz_grid = xz_grid.view(1, 1, h, w, 2)  # (1, 1, h=512, w=512, 2)
+
+        kp_driving_xy = kp_driving[0].view(bs, self.num_kp, 1, 1, 2)
+        kp_driving_yz = kp_driving[1].view(bs, self.num_kp, 1, 1, 2)
+        kp_driving_xz = kp_driving[2].view(bs, self.num_kp, 1, 1, 2)
+
+        kp_source_xy = kp_source[0].view(bs, self.num_kp, 1, 1, 2)
+        kp_source_yz = kp_source[1].view(bs, self.num_kp, 1, 1, 2)
+        kp_source_xz = kp_source[2].view(bs, self.num_kp, 1, 1, 2)
 
         # NOTE: there lacks an one-order flow
         driving_to_source_xy = xy_grid - kp_driving_xy + kp_source_xy
@@ -234,6 +274,43 @@ class DenseMotionNetwork(nn.Module):
         sparse_motion = sparse_motion.view(bs * 3, -1, h, w, 2).permute(0, 1, 4, 2, 3)    # (bs * 3, num_kp+1, 2, h, w)
         deformation = (sparse_motion * mask).sum(dim=1)            # (bs * 3, 2, h, w)  mask take effect in this place
         deformation = deformation.permute(0, 2, 3, 1)           # (bs * 3, h, w, 2)
+
+        out_dict['deformation'] = deformation
+
+        # NOTE: disabled
+        if self.flag_estimate_occlusion_map:
+            bs, _, d, h, w = prediction.shape
+            prediction_reshape = prediction.view(bs, -1, h, w)
+            occlusion_map = torch.sigmoid(self.occlusion(prediction_reshape))  # Bx1x64x64
+            out_dict['occlusion_map'] = occlusion_map
+
+        return out_dict
+
+    def forward3(self, feature, kp_driving, kp_source):
+        bs, _, _, c, h, w = feature.shape # (bs, 3, 1, 32, 512, 512)
+
+        out_dict = dict()
+
+        # 1. deform 3d feature
+        sparse_motion = self.create_sparse_motions2(feature, kp_driving, kp_source)  # (bs, 3, 1+num_kp, h, w, 2)
+
+        # TODO: Heat map is a 3D concept, how to adjust it for triplane?
+        # 2. (bs, 1+num_kp, d, h, w)
+        # heatmap = self.create_heatmap_representations(deformed_feature, kp_driving, kp_source)  # (bs, 1+num_kp, 1, d, h, w)
+
+        input = feature.reshape(bs, 3, -1, h, w)
+
+        prediction_xy = self.hourglass_xy(input[:, 0])  # (bs, 32, h, w)
+        prediction_yz = self.hourglass_yz(input[:, 1])
+        prediction_xz = self.hourglass_xz(input[:, 2])
+
+        prediction = torch.stack([prediction_xy, prediction_yz, prediction_xz], dim = 1).reshape(bs * 3, -1, h, w)
+        mask = F.softmax(prediction, dim=1)  # (bs* 3, 1+num_kp, h, w)
+        out_dict['mask'] = mask
+        mask = mask.unsqueeze(2)                                   # (bs*3, num_kp+1, 1, h, w)
+        sparse_motion = sparse_motion.reshape(bs*3, -1, h, w, 2).permute(0, 1, 4, 2, 3)    # (bs*3, num_kp+1, 2, h, w)
+        deformation = (sparse_motion * mask).sum(dim=1)            # (bs*3, 2, h, w)  mask take effect in this place
+        deformation = deformation.permute(0, 2, 3, 1)           # (bs*3, h, w, 2)
 
         out_dict['deformation'] = deformation
 

@@ -20,7 +20,7 @@ class TriplaneDataset(Dataset):
                  all_ids,
                  device,
                  local_rank=0,
-                 num_shards=1,
+                 world_size=1,
                  batch_size=1,
                  preload_mm=True,
                  ):
@@ -32,7 +32,6 @@ class TriplaneDataset(Dataset):
         self.device = device
         self.preload_mm = preload_mm
 
-        self.all_ids = all_ids
         self.src_photos = []
         self.ref_photos = []
         self.src_tpath = []
@@ -41,7 +40,10 @@ class TriplaneDataset(Dataset):
         self.pair_ids = []
         self.name_dict = {}
 
-        for id in all_ids:
+        self.all_ids = all_ids[local_rank:][::world_size]
+        print(f'shard {local_rank}/{world_size} processing {len(self.all_ids)} avatars.')
+
+        for id in self.all_ids:
             base_id = os.path.basename(id)
             src_triplane_path = os.path.join(self.src_root, base_id + '.npy')
             self.src_tpath.append(src_triplane_path)
@@ -61,7 +63,7 @@ class TriplaneDataset(Dataset):
 
         self.src_triplanes = [None] * len(self.src_tpath)
         self.tgt_triplanes = [None] * len(self.tgt_tpath)
-        self.pair_ids = self.all_pair_ids[local_rank:][::num_shards]
+        self.pair_ids = self.all_pair_ids
 
         if self.preload_mm:
             len_src = len(self.src_tpath)
@@ -109,6 +111,84 @@ class TriplaneDataset(Dataset):
                 torch.stack(tgt_t).to(self.device), \
                 names
         return DataLoader(self, batch_size = self.batch_size, shuffle = True, collate_fn = custom_collate_fn)
+
+class TriplaneDataset(Dataset):
+    def __init__(self,
+                 src_root,
+                 src_data,
+                 tgt_root,
+                 tgt_data,
+                 all_ids,
+                 device,
+                 local_rank=0,
+                 world_size=1,
+                 batch_size=1,
+                 preload_mm=True,
+                 ):
+        self.src_root = src_root
+        self.src_data = src_data
+        self.tgt_root = tgt_root
+        self.tgt_data = tgt_data
+        self.batch_size = batch_size
+        self.device = device
+        self.preload_mm = preload_mm
+
+        self.photos = []
+        self.tpath = []
+        self.names = []
+
+        self.all_ids = all_ids[local_rank:][::world_size]
+        print(f'shard {local_rank}/{world_size} processing {len(self.all_ids)} avatars.')
+
+        for id in self.all_ids:
+            base_id = os.path.basename(id)
+            src_triplane_path = os.path.join(self.src_root, base_id + '.npy')
+            self.tpath.append(src_triplane_path)
+
+            # NOTE: the first img is front.
+            src_photo_path = os.path.join(self.src_data, base_id, 'img_proc_fg_000000.png')
+            self.photos.append(load_image_rgb(src_photo_path))
+
+            tgt_files = glob.glob(os.path.join(tgt_root, base_id + '_*.npy'))
+            for tgt_triplane_path in tgt_files:
+                tgt_base_id = os.path.splitext(os.path.basename(tgt_triplane_path))[0]
+                self.tpath.append(tgt_triplane_path)
+
+                tgt_photo_path = os.path.join(self.tgt_data, tgt_base_id, 'img_proc_fg_000000.png')
+                self.photos.append(load_image_rgb(tgt_photo_path))
+
+        if self.preload_mm:
+            for id in range(len(self.tpath)):
+                triplane, name = load_triplane_from_idx(id)
+                self.triplanes.append(triplane)
+                self.names.append(name)
+
+    def load_triplane_from_idx(self, idx):
+        tpath = self.tpath[idx]
+        return load_triplane(tpath), tpath.split('/')[-1]
+
+    def __getitem__(self, idx):
+        if not self.preload_mm:
+            src_t, _ = self.load_triplane_from_idx(src_id, 'src')
+            tgt_t, name = self.load_triplane_from_idx(tgt_id, 'tgt')
+            return self.src_photos[src_id], self.ref_photos[tgt_id], src_t, tgt_t, name
+        else:
+            tgt_triplane = self.tgt_triplanes[tgt_id]
+            return self.src_photos[src_id], self.ref_photos[tgt_id], \
+                self.src_triplanes[src_id], tgt_triplane, self.name_dict[tgt_triplane]
+
+    def __len__(self):
+        return len(self.pair_ids)
+
+    def dataloader(self):
+        def custom_collate_fn(batch):
+            src_x, ref_x, src_t, tgt_t, names = zip(*batch) # tuple
+            return np.stack(src_x), np.stack(ref_x), \
+                torch.stack(src_t).to(self.device), \
+                torch.stack(tgt_t).to(self.device), \
+                names
+        return DataLoader(self, batch_size = self.batch_size, shuffle = True, collate_fn = custom_collate_fn)
+
 
 class TriplaneImageDataset(Dataset):
     def __init__(self,
@@ -181,9 +261,13 @@ class TriplaneLatentDataset(Dataset):
                  latent_root,
                  all_ids,
                  device,
-                 resolution,
+                 triplane_channel=32,
+                 resolution=512,
+                 local_rank=0,
+                 world_size=1,
                  batch_size=1,
-                 preload_mm=True):
+                 preload_mm=True,
+                 latent_type='latent'):
         self.src_root = src_root
         self.latent_root = latent_root
         self.tgt_root = tgt_root
@@ -191,19 +275,22 @@ class TriplaneLatentDataset(Dataset):
         self.batch_size = batch_size
         self.device = device
         self.preload_mm = preload_mm
+        self.triplane_channel = triplane_channel
         self.resolution = resolution
+        self.latent_type = latent_type
 
-        self.all_ids = all_ids
         self.latent_path = []
         self.src_tpath = []
         self.tgt_tpath = []
         self.pair_ids = []
 
-        for id in all_ids:
+        self.all_ids = all_ids[local_rank:][::world_size]
+        print(f'shard {local_rank}/{world_size} processing {len(self.all_ids)} avatars.')
+
+        for id in self.all_ids:
             base_id = os.path.basename(id)
             src_triplane_path = os.path.join(self.src_root, base_id + '.npy')
             self.src_tpath.append(src_triplane_path)
-
 
             tgt_files = glob.glob(os.path.join(tgt_root, base_id + '_*.npy'))
             for tgt_triplane_path in tgt_files:
@@ -214,6 +301,7 @@ class TriplaneLatentDataset(Dataset):
                 self.latent_path.append(tgt_photo_path)
 
                 self.pair_ids.append([len(self.src_tpath) - 1, len(self.tgt_tpath) - 1])
+
 
         self.src_triplanes = [None] * len(self.src_tpath)
         self.tgt_triplanes = [None] * len(self.tgt_tpath)
@@ -230,18 +318,20 @@ class TriplaneLatentDataset(Dataset):
 
             len_latent = len(self.latent_path)
             with ThreadPoolExecutor() as executor:
-                executor.map(self.load_triplane_from_idx, range(len_latent), ['latent'] * len_latent)
+                executor.map(self.load_triplane_from_idx, range(len_latent), [self.latent_type] * len_latent)
+
+            print(f'Preload {local_rank}/{world_size} done.')
 
     def load_triplane_from_idx(self, idx, type: str):
         if type == 'src':
             triplane = load_triplane(self.src_tpath[idx])
-            triplane = triplane.reshape(3, 32, self.resolution, self.resolution)
+            triplane = triplane.reshape(3, self.triplane_channel, self.resolution, self.resolution)
             triplane = torch.cat([triplane[0], triplane[1], triplane[2]], -1)
             self.src_triplanes[idx] = triplane
             return triplane
         elif type == 'tgt':
             triplane = load_triplane(self.tgt_tpath[idx])
-            triplane = triplane.reshape(3, 32, self.resolution, self.resolution)
+            triplane = triplane.reshape(3, self.triplane_channel, self.resolution, self.resolution)
             triplane = torch.cat([triplane[0], triplane[1], triplane[2]], -1)
             self.tgt_triplanes[idx] = triplane
             return triplane
@@ -249,6 +339,10 @@ class TriplaneLatentDataset(Dataset):
             latent = torch.load(self.latent_path[idx])
             mean, logvar = torch.chunk(latent, 2, dim=0)
             self.latents[idx] = mean
+            return latent
+        elif type == 'emo':
+            latent = torch.load(self.latent_path[idx])
+            self.latents[idx] = latent
             return latent
         else:
             raise ValueError(f"Unknown triplane type: {type}")
@@ -259,10 +353,10 @@ class TriplaneLatentDataset(Dataset):
         if not self.preload_mm:
             src_t = self.load_triplane_from_idx(src_id, 'src')
             tgt_t = self.load_triplane_from_idx(tgt_id, 'tgt')
-            latent = self.load_triplane_from_idx(tgt_id, 'latent')
-            return src_t, tgt_t, latent, tgt_base_id
+            latent = self.load_triplane_from_idx(tgt_id, self.latent_type)
+            return src_t, tgt_t, latent, tgt_base_id + '.npy'
         else:
-            return self.src_triplanes[src_id], self.tgt_triplanes[tgt_id], self.latents[tgt_id], tgt_base_id
+            return self.src_triplanes[src_id], self.tgt_triplanes[tgt_id], self.latents[tgt_id], tgt_base_id + '.npy'
 
     def __len__(self):
         return len(self.pair_ids)
@@ -273,6 +367,121 @@ class TriplaneLatentDataset(Dataset):
             return (torch.stack(src_t).to(self.device),
                     torch.stack(tgt_t).to(self.device),
                     torch.stack(latent).to(self.device), id)
+        return DataLoader(self, batch_size = self.batch_size, shuffle = False, collate_fn = custom_collate_fn)
+
+class TriplaneFeatureDataset(Dataset):
+    def __init__(self,
+                 src_root,
+                 tgt_root,
+                 tgt_data,
+                 ms_feature_root,
+                 all_ids,
+                 device,
+                 triplane_channels=32,
+                 resolution=512,
+                 local_rank=0,
+                 world_size=1,
+                 batch_size=1,
+                 preload_mm=True):
+        self.src_root = src_root
+        self.ms_feature_root = ms_feature_root
+        self.tgt_root = tgt_root
+        self.tgt_data = tgt_data
+        self.batch_size = batch_size
+        self.device = device
+        self.preload_mm = preload_mm
+        self.triplane_channels = triplane_channels
+        self.resolution = resolution
+
+        self.latent_path = []
+        self.src_latent_path = []
+        self.src_tpath = []
+        self.tgt_tpath = []
+        self.pair_ids = []
+
+        self.all_ids = all_ids[local_rank:][::world_size]
+        print(f'shard {local_rank}/{world_size} processing {len(self.all_ids)} avatars.')
+
+        for id in self.all_ids:
+            base_id = os.path.basename(id)
+            src_triplane_path = os.path.join(self.src_root, base_id + '.npy')
+            self.src_tpath.append(src_triplane_path)
+            src_feature_path = os.path.join(self.ms_feature_root, base_id + '.pt')
+            self.src_latent_path.append(src_feature_path)
+
+            tgt_files = glob.glob(os.path.join(tgt_root, base_id + '_*.npy'))
+            for tgt_triplane_path in tgt_files:
+                self.tgt_tpath.append(tgt_triplane_path)
+
+                tgt_base_id = os.path.splitext(os.path.basename(tgt_triplane_path))[0]
+                tgt_feature_path = os.path.join(self.ms_feature_root, tgt_base_id + '.pt')
+                self.latent_path.append(tgt_feature_path)
+
+                self.pair_ids.append([len(self.src_tpath) - 1, len(self.tgt_tpath) - 1])
+
+
+        self.src_triplanes = [None] * len(self.src_tpath)
+        self.tgt_triplanes = [None] * len(self.tgt_tpath)
+        self.latents = [None] * len(self.latent_path)
+
+        if self.preload_mm:
+            len_src = len(self.src_tpath)
+            with ThreadPoolExecutor() as executor:
+                executor.map(self.load_triplane_from_idx, range(len_src), ['src'] * len_src)
+
+            len_tgt = len(self.tgt_tpath)
+            with ThreadPoolExecutor() as executor:
+                executor.map(self.load_triplane_from_idx, range(len_tgt), ['tgt'] * len_tgt)
+
+            len_latent = len(self.latent_path)
+            with ThreadPoolExecutor() as executor:
+                executor.map(self.load_triplane_from_idx, range(len_latent), ['feature'] * len_latent)
+
+            print(f'Preload {local_rank}/{world_size} done.')
+
+    def load_triplane_from_idx(self, idx, type: str):
+        if type == 'src':
+            triplane = load_triplane(self.src_tpath[idx])
+            triplane = triplane.reshape(3, self.triplane_channels, self.resolution, self.resolution)
+            triplane = torch.cat([triplane[0], triplane[1], triplane[2]], -1)
+            self.src_triplanes[idx] = triplane[:2]
+            feature = [feat.to(torch.float32) for feat in torch.load(self.src_latent_path[idx])]
+            return triplane, feature
+        elif type == 'tgt':
+            triplane = load_triplane(self.tgt_tpath[idx])
+            triplane = triplane.reshape(3, self.triplane_channels, self.resolution, self.resolution)
+            triplane = torch.cat([triplane[0], triplane[1], triplane[2]], -1)
+            self.tgt_triplanes[idx] = triplane[:2]
+            return triplane
+        elif type == 'feature':
+            feature = [feat.to(torch.float32) for feat in torch.load(self.latent_path[idx])]
+            self.latents[idx] = feature
+            return feature
+        else:
+            raise ValueError(f"Unknown triplane type: {type}")
+
+    def __getitem__(self, idx):
+        src_id, tgt_id = self.pair_ids[idx]
+        tgt_base_id = os.path.splitext(os.path.basename(self.tgt_tpath[tgt_id]))[0]
+        if not self.preload_mm:
+            src_t, src_l = self.load_triplane_from_idx(src_id, 'src')
+            tgt_t = self.load_triplane_from_idx(tgt_id, 'tgt')
+            latent = self.load_triplane_from_idx(tgt_id, 'feature')
+            latent = [l + 10 * (l - s_l) for l, s_l in zip(latent, src_l)]
+            return src_t, tgt_t, latent, tgt_base_id + '.npy'
+        else:
+            return self.src_triplanes[src_id], self.tgt_triplanes[tgt_id], self.latents[tgt_id], tgt_base_id + '.npy'
+
+    def __len__(self):
+        return len(self.pair_ids)
+
+    def dataloader(self):
+        def custom_collate_fn(batch):
+            src_t, tgt_t, latent, id = zip(*batch) # tuple
+            latent = [torch.stack([l[i] for l in latent]) for i in range(len(latent[0]))]
+            return (torch.stack(src_t).to(self.device),
+                    torch.stack(tgt_t).to(self.device),
+                    latent, id)
         return DataLoader(self, batch_size = self.batch_size, shuffle = False, collate_fn = custom_collate_fn)
 
 class TriplaneImagesDataset(Dataset):
