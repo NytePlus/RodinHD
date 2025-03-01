@@ -1,0 +1,5 @@
+# ninja log v5
+1	22927	1739627871532043888	/data1/wcc/RodinHD/Renderer/shencoder/build/temp.linux-x86_64-cpython-39/data1/wcc/RodinHD/Renderer/shencoder/src/bindings.o	74ed16f9d4569df1
+1	57258	1739627905807690595	/data1/wcc/RodinHD/Renderer/shencoder/build/temp.linux-x86_64-cpython-39/data1/wcc/RodinHD/Renderer/shencoder/src/shencoder.o	1308f7fb5ecd2205
+33	22565	1740625371230345750	/data1/wcc/RodinHD/Renderer/shencoder/build/temp.linux-x86_64-cpython-39/data1/wcc/RodinHD/Renderer/shencoder/src/bindings.o	544c5a1ed5473b00
+34	54836	1740625403438228326	/data1/wcc/RodinHD/Renderer/shencoder/build/temp.linux-x86_64-cpython-39/data1/wcc/RodinHD/Renderer/shencoder/src/shencoder.o	415465b68ba3d8f5

@@ -12,5 +12,5 @@ DIFFUSION_FLAGS="--noise_schedule sigmoid  "
 SAMPLE_FLAGS="--num_samples 10 --sample_c 1.0"
 DATASET_FLAGS="--data_dir $hr_triplane_path --image_root $image_root --mode triplane --start_idx 0 --end_idx $num_samples --txt_file $txt_file --latent_root $latent_root"
 DEEPSPEED_FLAGS="--deepspeed_config pretrained_diffusion/configs/upsample_deepspeed.json"
-
-CUDA_VISIBLE_DEVICES=1,4 deepspeed --num_gpus=2 upsample_train.py $MODEL_FLAGS  $TRAIN_FLAGS $SAMPLE_FLAGS $DIFFUSION_FLAGS  $DATASET_FLAGS $DEEPSPEED_FLAGS 
+export TORCH_CUDA_ARCH_LIST="8.9"
+CUDA_VISIBLE_DEVICES=7 deepspeed --num_gpus=1 upsample_train.py $MODEL_FLAGS  $TRAIN_FLAGS $SAMPLE_FLAGS $DIFFUSION_FLAGS  $DATASET_FLAGS $DEEPSPEED_FLAGS 

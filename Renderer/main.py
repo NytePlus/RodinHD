@@ -7,7 +7,7 @@ import argparse
 import random
 import concurrent
 
-from nerf.utils import LpipsLoss
+from nerf.utils import LpipsLoss, ArcfaceLoss
 
 sys.path.append('../Warpper')
 
@@ -133,10 +133,10 @@ if __name__ == '__main__':
     )
     print(model)
 
-    if opt.num_rays == -1:
-        criterion = LpipsLoss(device)
-    else:
-        criterion = torch.nn.MSELoss(reduction='mean')
+    # if opt.finetune:
+    #     criterion = ArcfaceLoss(device=device)
+    # else:
+    criterion = torch.nn.MSELoss(reduction='mean')
 
     if opt.test:
         shard=MPI.COMM_WORLD.Get_rank()

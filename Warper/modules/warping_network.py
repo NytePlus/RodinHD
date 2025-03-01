@@ -7,7 +7,7 @@ keypoint representations x_s and x_d, and employs this flow field to warp the so
 
 from torch import nn
 import torch.nn.functional as F
-from modules.util import SameBlock2d
+from modules.util import SameBlock2d, Hourglass
 from modules.dense_motion import DenseMotionNetwork
 
 
@@ -38,8 +38,10 @@ class WarpingNetwork(nn.Module):
         else:
             self.dense_motion_network = None
 
-        self.third = SameBlock2d(block_expansion * (2 ** num_down_blocks), block_expansion * (2 ** num_down_blocks), kernel_size=(3, 3), padding=(1, 1), lrelu=True)
-        self.fourth = nn.Conv2d(in_channels=block_expansion * (2 ** num_down_blocks), out_channels=block_expansion * (2 ** num_down_blocks), kernel_size=1, stride=1)
+        # self.third = SameBlock2d(block_expansion * (2 ** num_down_blocks), block_expansion * (2 ** num_down_blocks), kernel_size=(3, 3), padding=(1, 1), lrelu=True)
+        # self.fourth = nn.Conv2d(in_channels=block_expansion * (2 ** num_down_blocks), out_channels=block_expansion * (2 ** num_down_blocks), kernel_size=1, stride=1)
+        self.fifth = Hourglass(block_expansion=block_expansion, in_features=block_expansion * (2 ** num_down_blocks), out_features=block_expansion * (2 ** num_down_blocks),
+                                      max_features=max_features, num_blocks=num_down_blocks)  # ~60+G
 
         self.estimate_occlusion_map = estimate_occlusion_map
 
@@ -49,7 +51,7 @@ class WarpingNetwork(nn.Module):
     def forward(self, feature_3d, kp_driving, kp_source):
         if self.dense_motion_network is not None:
             # Feature warper, Transforming feature representation according to deformation and occlusion
-            dense_motion = self.dense_motion_network(
+            dense_motion = self.dense_motion_network.forward3(
                 feature=feature_3d, kp_driving=kp_driving, kp_source=kp_source  # Bx32x64x64
             )
             if 'occlusion_map' in dense_motion:
@@ -63,8 +65,7 @@ class WarpingNetwork(nn.Module):
             out = self.deform_input(feature_3d, deformation)  # (Bx3)x32x512x512
 
             out = out.view(bs*3, c, h, w)  # -> (Bx3)x32x512x512
-            out = self.third(out)  # -> (Bx3)x32x512x512
-            out = self.fourth(out)  # -> (Bx3)x32x512x512
+            out = out + self.fifth(out)  # -> (Bx3)x32x512x512
 
             if self.flag_use_occlusion_map and (occlusion_map is not None):
                 out = out * occlusion_map

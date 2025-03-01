@@ -300,7 +300,7 @@ class ResnetBlock(nn.Module):
 class LightWarpingNetwork(nn.Module):
     def __init__(self, scale=4, image_size=256, n_feats=64, n_resblocks=6, kernel_size=3, use_fp16=False,
                  use_checkpoint=False, ch_mult=[1, 2], use_scale_shift_norm=False, use_3d_conv=True,
-                 condition_channels=32, dtype="32"):
+                 condition_channels=32, dtype="32", latent_type="emo"):
         super(LightWarpingNetwork, self).__init__()
 
         self.n_feats = n_feats
@@ -310,6 +310,7 @@ class LightWarpingNetwork(nn.Module):
         self.dtype = th.float16 if dtype == "16" else th.float32
         self.use_checkpoint = use_checkpoint
         self.attention_level = (2,)
+        self.latent_type = latent_type
         print("use_checkpoint", use_checkpoint)
         ch = n_feats
 
@@ -404,6 +405,7 @@ class LightWarpingNetwork(nn.Module):
 
         self.conv1 = nn.Conv2d(in_channels=4, out_channels=encoder_dim, kernel_size=patch_size, stride=patch_size,
                                bias=False)
+        self.fc1 = nn.Linear(in_features=256, out_features=encoder_dim, bias=False)
         if encoder_dim != self.temb_ch:
             self.encoder_proj = nn.Linear(encoder_dim, self.temb_ch)
         else:
@@ -452,11 +454,15 @@ class LightWarpingNetwork(nn.Module):
         xt = xt.type(self.dtype)
 
         # 966 MB
-        latent_outputs = (ref * self.scaling_factor).type(self.dtype)
-        latent_outputs_emb = self.conv1(latent_outputs)  # shape = [*, width, grid, grid]
-        latent_outputs_emb = latent_outputs_emb.reshape(latent_outputs_emb.shape[0], latent_outputs_emb.shape[1],
-                                                        -1)  # shape = [*, width, grid ** 2]
-        latent_outputs_emb = latent_outputs_emb.permute(0, 2, 1)  # shape = [*, grid ** 2, width]
+        if self.latent_type == 'vae':
+            latent_outputs = (ref * self.scaling_factor).type(self.dtype)
+            latent_outputs_emb = self.conv1(latent_outputs)  # shape = [*, width, grid, grid]
+            latent_outputs_emb = latent_outputs_emb.reshape(latent_outputs_emb.shape[0], latent_outputs_emb.shape[1],
+                                                            -1)  # shape = [*, width, grid ** 2]
+            latent_outputs_emb = latent_outputs_emb.permute(0, 2, 1)  # shape = [*, grid ** 2, width]
+        elif self.latent_type == 'emo':
+            emo_outputs = (ref * self.scaling_factor).type(self.dtype)
+            latent_outputs_emb = self.fc1(emo_outputs).unsqueeze(1)
 
         encoder_out = self.encoder_proj(latent_outputs_emb)
         encoder_out = encoder_out.permute(0, 2, 1)  # NLC -> NCL

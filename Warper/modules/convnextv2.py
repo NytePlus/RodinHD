@@ -95,15 +95,8 @@ class ConvNeXtV2(nn.Module):
         # NOTE: the output semantic items
         num_bins = kwargs.get('num_bins', 66)
         num_kp = kwargs.get('num_kp', 24)  # the number of implicit keypoints
-        self.fc_kp = nn.Linear(dims[-1], 3 * num_kp)  # implicit keypoints
-
-        # print('dims[-1]: ', dims[-1])
-        self.fc_scale = nn.Linear(dims[-1], 1)  # scale
-        self.fc_pitch = nn.Linear(dims[-1], num_bins)  # pitch bins
-        self.fc_yaw = nn.Linear(dims[-1], num_bins)  # yaw bins
-        self.fc_roll = nn.Linear(dims[-1], num_bins)  # roll bins
-        self.fc_t = nn.Linear(dims[-1], 3)  # translation
-        self.fc_exp = nn.Linear(dims[-1], 3 * num_kp)  # expression / delta
+        # self.fc_kp = nn.Linear(dims[-1], 3 * num_kp)  # implicit keypoints
+        self.fc_kp2d = nn.Linear(dims[-1], 2 * num_kp)
 
     def _init_weights(self, m):
         if isinstance(m, (nn.Conv2d, nn.Linear)):
@@ -120,25 +113,12 @@ class ConvNeXtV2(nn.Module):
         x = self.forward_features(x)
 
         # implicit keypoints
-        kp = self.fc_kp(x)
-
-        # pose and expression deformation
-        pitch = self.fc_pitch(x)
-        yaw = self.fc_yaw(x)
-        roll = self.fc_roll(x)
-        t = self.fc_t(x)
-        exp = self.fc_exp(x)
-        scale = self.fc_scale(x)
+        # kp = self.fc_kp(x)
+        kp_2d = self.fc_kp2d(x)
 
         ret_dct = {
-            'pitch': pitch,
-            'yaw': yaw,
-            'roll': roll,
-            't': t,
-            'exp': exp,
-            'scale': scale,
-
-            'kp': kp,  # canonical keypoint
+            # 'kp': kp,  # canonical keypoint
+            'kp_2d': kp_2d,
         }
 
         return ret_dct

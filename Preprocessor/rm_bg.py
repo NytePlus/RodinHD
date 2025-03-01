@@ -22,6 +22,11 @@ def remove_background_floodFill(img_np, bg_color = None, fill_color = (0, 0, 0),
 
     return img_np
 
+def remove_background_rembg(cv_img):
+    cv_img = remove(cv_img, bgcolor=(255, 255, 255, 255), session=session)
+    cv2.imwrite(img.replace(base_dir.split('/')[-1], out_dir.split('/')[-1]), cv_img)
+    return cv_img
+
 base_dir = '../data/portrait3d_data'
 out_dir = '../data/portrait3d_nobg'
 num_threads = 1
@@ -40,9 +45,6 @@ def process(i):
             continue
         for img in tqdm(imgs):
             cv_img = cv2.imread(img)
-            # remove_background_floodFill(cv_img, fill_color= [100, 98, 97])
-            cv_img = remove(cv_img, bgcolor=(255, 255, 255, 255), session=session)
-            cv2.imwrite(img.replace(base_dir.split('/')[-1], out_dir.split('/')[-1]), cv_img)
 
 if num_threads > 1:
     with ProcessPoolExecutor(max_workers=num_threads) as executor:

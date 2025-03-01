@@ -5,10 +5,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.checkpoint as torchck
 
-from Warper.modules.nn import avg_pool_nd, conv_nd, normalization, timestep_embedding, zero_module, Conv3DAware, AttentionPooling, checkpoint
-from Warper.modules.fp16_util import convert_module_to_f16, convert_module_to_f32
+from modules.nn import avg_pool_nd, conv_nd, normalization, timestep_embedding, zero_module, Conv3DAware, AttentionPooling, checkpoint
+from modules.fp16_util import convert_module_to_f16, convert_module_to_f32
 
-_FORCE_MEM_EFFICIENT_ATTN = 0
+_FORCE_MEM_EFFICIENT_ATTN = 1
 print('FORCE_MEM_EFFICIENT_ATTN=', _FORCE_MEM_EFFICIENT_ATTN, '@UNET:QKVATTENTION')
 if _FORCE_MEM_EFFICIENT_ATTN:
     from xformers.ops import memory_efficient_attention  # noqa
@@ -217,7 +217,7 @@ class AttentionBlock(nn.Module):
         self.attention = QKVAttention(self.num_heads)
 
         if encoder_channels is not None:
-            self.encoder_kv = conv_nd(1, encoder_channels, channels * 2, 1)
+            self.encoder_kv = conv_nd(1, encoder_channels, channels * 2, 1) # (bs, 256, -1)
         self.proj_out = zero_module(conv_nd(1, channels, channels, 1))
 
     def forward(self, x, encoder_out=None):
@@ -321,6 +321,7 @@ class UNetModel(nn.Module):
             use_scale_shift_norm=False,
             resblock_updown=False,
             encoder_channels=None,
+            use_mask=False,
     ):
         super().__init__()
 
@@ -342,6 +343,7 @@ class UNetModel(nn.Module):
         self.num_head_channels = num_head_channels
         self.num_heads_upsample = num_heads_upsample
         self.encoder_channels = encoder_channels
+        self.use_mask = use_mask
 
         if self.num_classes is not None:
             raise "Class embedding is not supported."
@@ -369,6 +371,7 @@ class UNetModel(nn.Module):
                     )
                 ]
                 ch = int(mult * model_channels)
+                print(ds, attention_resolutions)
                 if ds in attention_resolutions:
                     layers.append(
                         AttentionBlock(
@@ -483,6 +486,13 @@ class UNetModel(nn.Module):
             nn.Identity(),
             zero_module(conv_nd(dims, input_ch, out_channels, 3, padding=1)),
         )
+        if self.use_mask:
+            self.mask = nn.Sequential(
+                nn.Identity(),
+                zero_module(conv_nd(dims, out_channels, 1, 3, padding=1)),
+                nn.Sigmoid(),
+            )
+
         self.use_fp16 = use_fp16
 
     def convert_to_fp16(self):
@@ -533,6 +543,7 @@ class UNetModel(nn.Module):
         return self.out(h)
 
 
+# use this
 class WarpingNetwork(nn.Module):
     def __init__(
             self,
@@ -550,6 +561,7 @@ class WarpingNetwork(nn.Module):
             use_scale_shift_norm,
             resblock_updown,
             in_channels=32,
+            use_mask=False,
     ):
         super().__init__()
 
@@ -569,7 +581,8 @@ class WarpingNetwork(nn.Module):
             num_head_channels=num_head_channels,
             use_scale_shift_norm=use_scale_shift_norm,
             resblock_updown=resblock_updown,
-            encoder_channels=xf_width
+            encoder_channels=xf_width,
+            use_mask=use_mask,
         )
 
     def forward(self, xt, vae_ms_feature=None):
@@ -591,12 +604,16 @@ class MultiscaleVAELatentUNet(UNetModel):
         att_pool_heads = 8
         self.scaling_factor = 0.13025
 
-        self.norm32 = normalization(512)
-        self.norm64 = normalization(256)
-        self.norm128 = normalization(128)
-        self.vae_ms_feature_proj_32 = nn.Conv2d(512, self.encoder_channels, kernel_size=4, stride=4, bias=False)
-        self.vae_ms_feature_proj_64 = nn.Conv2d(256, self.encoder_channels, kernel_size=8, stride=8, bias=False)
-        self.vae_ms_feature_proj_128 = nn.Conv2d(128, self.encoder_channels, kernel_size=16, stride=16, bias=False)
+        self.norm8 = normalization(256)
+        self.norm16 = normalization(256)
+        self.norm32 = normalization(256)
+        self.norm64 = normalization(128)
+        self.norm128 = normalization(64)
+        self.vae_ms_feature_proj_8 = nn.Conv2d(256, self.encoder_channels, kernel_size=8, stride=8, bias=False)
+        self.vae_ms_feature_proj_16 = nn.Conv2d(256, self.encoder_channels, kernel_size=4, stride=4, bias=False)
+        self.vae_ms_feature_proj_32 = nn.Conv2d(256, self.encoder_channels, kernel_size=2, stride=2, bias=False)
+        self.vae_ms_feature_proj_64 = nn.Conv2d(128, self.encoder_channels, kernel_size=1, stride=1, bias=False)
+        self.vae_ms_feature_proj_128 = nn.Conv2d(64, self.encoder_channels, kernel_size=1, stride=1, bias=False)
 
     def forward(self, x, vae_ms_feature):
         '''
@@ -606,6 +623,12 @@ class MultiscaleVAELatentUNet(UNetModel):
         x = x.type(self.dtype)
         hs = []
 
+        vae_feature_8 = self.vae_ms_feature_proj_8(self.norm8(vae_ms_feature[4]).type(self.dtype))
+        vae_feature_8 = vae_feature_8.reshape(vae_feature_8.shape[0], vae_feature_8.shape[1],
+                                                -1)  # shape: (N, C, L)
+        vae_feature_16 = self.vae_ms_feature_proj_16(self.norm16(vae_ms_feature[3]).type(self.dtype))
+        vae_feature_16 = vae_feature_16.reshape(vae_feature_16.shape[0], vae_feature_16.shape[1],
+                                                -1)  # shape: (N, C, L)
         vae_feature_32 = self.vae_ms_feature_proj_32(self.norm32(vae_ms_feature[2]).type(self.dtype))
         vae_feature_32 = vae_feature_32.reshape(vae_feature_32.shape[0], vae_feature_32.shape[1],
                                                 -1)  # shape: (N, C, L)
@@ -615,7 +638,20 @@ class MultiscaleVAELatentUNet(UNetModel):
         vae_feature_128 = self.vae_ms_feature_proj_128(self.norm128(vae_ms_feature[0]).type(self.dtype))
         vae_feature_128 = vae_feature_128.reshape(vae_feature_128.shape[0], vae_feature_128.shape[1],
                                                   -1)  # shape: (N, C, L)
-        encoder_out_feature = {32: vae_feature_128, 16: vae_feature_64, 8: vae_feature_32}
+
+        # encoder_out_feature = {
+        #     128: th.zeros(x.shape[0], self.encoder_channels, 128 * 128).half().to(x.device),
+        #     64: th.zeros(x.shape[0], self.encoder_channels, 64 * 64).half().to(x.device),
+        #     32: th.zeros(x.shape[0], self.encoder_channels, 32 * 32).half().to(x.device),
+        #     16: th.zeros(x.shape[0], self.encoder_channels, 16 * 16).half().to(x.device),
+        #     8: th.zeros(x.shape[0], self.encoder_channels, 8 * 8).half().to(x.device)}
+        encoder_out_feature = {
+            # 128: vae_feature_128,
+            64: vae_feature_64,
+            32: vae_feature_32,
+            16: vae_feature_16,
+            8: vae_feature_8,
+        }
 
         h = x.type(self.dtype)
         for module in self.input_blocks:
@@ -632,6 +668,8 @@ class MultiscaleVAELatentUNet(UNetModel):
             h = module(h, encoder_out)
         h = h.type(input_type)
         h = self.out(h)
-        return h.type(input_type)
+
+        mask = self.mask(h) if self.use_mask else None
+        return h.type(input_type), mask
 
 

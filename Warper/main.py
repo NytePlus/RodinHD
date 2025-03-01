@@ -1,6 +1,12 @@
 import os
 import sys
 
+import tyro
+from LivePortrait.live_portrait_pipeline import LivePortraitPipeline
+from LivePortrait.config.crop_config import CropConfig
+from LivePortrait.config.inference_config import InferenceConfig
+from LivePortrait.config.argument_config import ArgumentConfig
+
 sys.path.append('../Renderer')
 import torch
 import argparse
@@ -12,13 +18,14 @@ from TriplaneFit.network import NeRFNetwork
 
 import dist_util
 
-from provider import TriplaneLatentDataset, TriplaneDataset, TriplaneImagesDataset
-from metrics import PSNRMeter
+from provider import TriplaneLatentDataset, TriplaneDataset, TriplaneImagesDataset, TriplaneFeatureDataset
+from metrics import PSNRMeter, CustomMSELoss
 from modules.motion_extractor import MotionExtractor
 from trainer import seed_everything, Trainer
-from modules.warping_network import WarpingNetwork
-# from Warper.modules.conv_warping import WarpingNetwork
+from modules.warping_network import WarpingNetwork as _WarpingNetwork
+from modules.conv_warping import WarpingNetwork
 from modules.conv_light_warping import LightWarpingNetwork
+from modules.discriminator import Discriminator
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -29,6 +36,8 @@ if __name__ == "__main__":
     parser.add_argument('--tgt_root', type=str, default='')
     parser.add_argument('--tgt_data', type=str, default='')
     parser.add_argument('--latent_root', type=str, default='')
+    parser.add_argument('--ms_feature_root', type=str, default='')
+    parser.add_argument('--latent_type', type=str, default='emo')
     parser.add_argument('-O', action='store_true', help="equals --fp16 --cuda_ray --preload")
     parser.add_argument('--cuda_ray', action='store_true', help="use CUDA raymarching instead of pytorch")
     parser.add_argument('-debug', action='store_true', help="debug for tensor dims")
@@ -89,23 +98,35 @@ if __name__ == "__main__":
         opt.fp16 = True
         opt.cuda_ray = True
 
-    renderer = NeRFNetwork(
-        resolution=[opt.resolution0] * 3,
-        bound=opt.bound,
-        cuda_ray=opt.cuda_ray,
-        density_scale=1,
-        min_near=opt.min_near,
-        density_thresh=opt.density_thresh,
-        bg_radius=opt.bg_radius,
-        grid_size=opt.grid_size,
-        sigma_rank=[int(opt.triplane_channels // 4)] * 3,
-        color_rank=[int(opt.triplane_channels // 4 * 3)] * 3,
-        triplane_channels=opt.triplane_channels,
-    )
+    # renderer = NeRFNetwork(
+    #     resolution=[opt.resolution0] * 3,
+    #     bound=opt.bound,
+    #     cuda_ray=opt.cuda_ray,
+    #     density_scale=1,
+    #     min_near=opt.min_near,
+    #     density_thresh=opt.density_thresh,
+    #     bg_radius=opt.bg_radius,
+    #     grid_size=opt.grid_size,
+    #     sigma_rank=[int(opt.triplane_channels // 4)] * 3,
+    #     color_rank=[int(opt.triplane_channels // 4 * 3)] * 3,
+    #     triplane_channels=opt.triplane_channels,
+    # )
 
-    if True:
-        warper = WarpingNetwork(
-            num_kp = 21,
+    discriminator, optimizer_d, motion_extractor, optimizer_me = None, None, None, None
+    if False:
+        def partial_fields(target_class, kwargs):
+            filtered_kwargs = {k: v for k, v in kwargs.items() if not k.startswith('__') and hasattr(target_class, k)}
+            return target_class(**filtered_kwargs)
+
+        inference_cfg = partial_fields(InferenceConfig, ArgumentConfig.__dict__)
+        crop_cfg = partial_fields(CropConfig, ArgumentConfig.__dict__)
+        warper = LivePortraitPipeline(inference_cfg=inference_cfg, crop_cfg=crop_cfg)
+
+        motion_extractor = None
+        optimizer_me = None
+    elif False:
+        warper = _WarpingNetwork(
+            num_kp = 64,
             block_expansion = 8,
             max_features = 512,
             num_down_blocks = 2,
@@ -117,30 +138,53 @@ if __name__ == "__main__":
                 'num_blocks': 2,
                 'reshape_depth': 32,
                 'compress': 8,
-                'down_scale': 2,
+                'down_scale': 1,
             }
         )
 
         motion_extractor = MotionExtractor(
-            num_kp=21,
+            num_kp=192,
             backbone='convnextv2_tiny'
         )
+        optimizer_me = torch.optim.Adam(motion_extractor.parameters(), lr=opt.lr0, betas=(0.9, 0.99), eps=1e-15)
     elif False:
         warper = WarpingNetwork(
-            xf_width=512,
-            model_channels=192,
-            out_channels=64,
-            num_res_blocks=3,
-            attention_resolutions=[4, 8, 16],
+            xf_width=256,
+            model_channels=32,
+            out_channels=opt.triplane_channels,
+            num_res_blocks=1,
+            attention_resolutions=[32, 64],
             dropout=0.1,
-            channel_mult=(1, 1, 2, 3, 4),
+            channel_mult=(1, 2, 2, 2, 4, 4, 4),
             use_fp16=False,
             num_heads=1,
             num_heads_upsample=-1,
-            num_head_channels=64,
-            use_scale_shift_norm=True,
-            resblock_updown=True,
-            in_channels=32,
+            num_head_channels=8,
+            use_scale_shift_norm=False,
+            resblock_updown=False,
+            in_channels=opt.triplane_channels,
+            use_mask=True,
+        )
+
+        discriminator = Discriminator(input_channels = 8)
+        optimizer_d = torch.optim.Adam(discriminator.parameters(), lr=1e-4, betas=(0.9, 0.99), eps=1e-8)
+    elif True:
+        warper = WarpingNetwork(
+            xf_width=256,
+            model_channels=32,
+            out_channels=2,
+            num_res_blocks=2, # 0c 1
+            attention_resolutions=[32, 64],
+            dropout=0.1,
+            channel_mult=(1, 2, 4, 4, 8, 8, 16), # 0c (1, 2, 2, 2, 4, 4, 4)
+            use_fp16=False,
+            num_heads=1,
+            num_heads_upsample=-1,
+            num_head_channels=8,
+            use_scale_shift_norm=False,
+            resblock_updown=False,
+            in_channels=2,
+            use_mask=False,
         )
     else:
         warper = LightWarpingNetwork(
@@ -153,18 +197,23 @@ if __name__ == "__main__":
             use_scale_shift_norm=False,
             dtype='32',
             use_3d_conv=False,
-            n_resblocks=2
+            n_resblocks=2,
+            latent_type="emo",
         )
+        motion_extractor = None
+        optimizer_me = None
         # half cannot coexist with autocast?
 
     criterion = nn.MSELoss(reduction='mean')
-    optimizer = torch.optim.Adam(warper.parameters(), lr=opt.lr0, betas=(0.9, 0.99), eps=1e-8)
-    optimizer_me = torch.optim.Adam(motion_extractor.parameters(), lr=opt.lr0, betas=(0.9, 0.99), eps=1e-15)
+    if optimizer_d:
+        optimizer = torch.optim.Adam(warper.parameters(), lr=1e-4, betas=(0.9, 0.99), eps=1e-8)
+    else:
+        optimizer = torch.optim.Adam(warper.parameters(), lr=opt.lr0, betas=(0.9, 0.99), eps=1e-8)
 
-    scheduler = lambda optimizer: optim.lr_scheduler.LambdaLR(optimizer, lambda iter: 0.01 ** min(iter / opt.num_epochs, 1))
+    scheduler = lambda optimizer: optim.lr_scheduler.LambdaLR(optimizer, lambda iter: 1 ** min(iter / opt.num_epochs, 1))
     shard = MPI.COMM_WORLD.Get_rank()
     num_shards = MPI.COMM_WORLD.Get_size()
-    trainer = Trainer('snapshot_8', opt, renderer, warper, motion_extractor, local_rank=shard, world_size=num_shards, device=device, workspace=opt.workspace, optimizer=optimizer, optimizer_me=optimizer_me, criterion=criterion, fp16=opt.fp16, lr_scheduler=scheduler, scheduler_update_every_step=False, metrics=[PSNRMeter()], use_checkpoint=opt.ckpt, renderer_checkpoint=opt.r_ckpt, eval_interval=opt.eval_freq)
+    trainer = Trainer('snapshot_2b', opt, None, warper, motion_extractor, discriminator, local_rank=shard, world_size=num_shards, device=device, workspace=opt.workspace, optimizer=optimizer, optimizer_me=optimizer_me, optimizer_d=optimizer_d, criterion=criterion, fp16=opt.fp16, lr_scheduler=scheduler, scheduler_update_every_step=False, metrics=[PSNRMeter()], use_checkpoint=opt.ckpt, renderer_checkpoint=opt.r_ckpt, eval_interval=opt.eval_freq)
 
     if opt.debug and False:
         x1 = trainer.prepare_source(np.ones((1, 1024, 1024, 3)))
@@ -192,9 +241,13 @@ if __name__ == "__main__":
         else:
             all_ids = f.read().splitlines()
 
-    # train_loader = TriplaneDataset(opt.src_root, opt.src_data, opt.tgt_root, opt.tgt_data, all_ids, device, batch_size=opt.batch_size).dataloader()
+    # train_loader = TriplaneDataset(opt.src_root, opt.src_data, opt.tgt_root, opt.tgt_data, all_ids, device, batch_size=opt.batch_size, local_rank=shard, world_size=num_shards).dataloader()
     # train_loader = TriplaneImageDataset(opt, opt.src_root, opt.tgt_data, opt.latent_root, resolution=opt.resolution0, all_ids=all_ids, device=device).dataloader()
-    # train_loader = TriplaneLatentDataset(opt.src_root, opt.tgt_root, opt.tgt_data, opt.latent_root, resolution=opt.resolution0, all_ids=all_ids, device=device, batch_size=opt.batch_size).dataloader()
-    train_loader = TriplaneImagesDataset(opt, opt.src_root, opt.src_data, opt.tgt_data, all_ids, device, opt.resolution0, local_rank=shard, world_size=num_shards).dataloader()
+
+    # train_loader = TriplaneLatentDataset(opt.src_root, opt.tgt_root, opt.tgt_data, opt.latent_root, latent_type=opt.latent_type, triplane_channel=opt.triplane_channels, resolution=opt.resolution0, all_ids=all_ids, device=device, batch_size=opt.batch_size, local_rank=shard, world_size=num_shards).dataloader()
+    train_loader = TriplaneFeatureDataset(opt.src_root, opt.tgt_root, opt.tgt_data, opt.ms_feature_root, preload_mm=True, triplane_channels=opt.triplane_channels, resolution=opt.resolution0, all_ids=all_ids, device=device, batch_size=opt.batch_size, local_rank=shard, world_size=num_shards).dataloader()
+
+    # train_loader = TriplaneImagesDataset(opt, opt.src_root, opt.src_data, opt.tgt_data, all_ids, device, opt.resolution0, local_rank=shard, world_size=num_shards).dataloader()
+
 
     trainer.train(train_loader, max_epochs=opt.num_epochs)

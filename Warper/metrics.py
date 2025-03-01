@@ -3,7 +3,6 @@ import torch
 import numpy as np
 
 from torch import nn
-from id_model import Backbone
 
 class PSNRMeter:
     def __init__(self):
@@ -41,30 +40,18 @@ class PSNRMeter:
     def report(self):
         return f'PSNR = {self.measure():.6f}'
 
-class ArcfaceLoss(nn.Module):
-    def __init__(self, device):
-        super().__init__()
-        self.id_model = Backbone(num_layers=50, drop_ratio=0.6, mode='ir_se')
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        self.id_model.load_state_dict(torch.load(current_dir + "/weights/model_ir_se50.pth", map_location=device))
-        self.id_model.eval()
 
-    def forward(self, output, target):
-        # print(output.shape, target.shape)
-        if len(output.shape) == 3:
-            output = output.permute(0, 2, 1).reshape(-1, 3, 128, 128)
-            target = target.permute(0, 2, 1).reshape(-1, 3, 128, 128)
-        else:
+class CustomMSELoss(nn.Module):
+    def __init__(self, threshold=0.01, scale_factor=0.1):
+        super(CustomMSELoss, self).__init__()
+        self.threshold = threshold
+        self.scale_factor = scale_factor
 
-            output = output.permute(0, 3, 1, 2)
-            target = target.permute(0, 3, 1, 2)
-        output = (output + 1.) / 2.
-        target = (target + 1.) / 2.
-        output = output.clamp(0, 1)
-        target = target.clamp(0, 1)
-        output = torch.nn.functional.interpolate(output, size=(112, 112), mode='bilinear', align_corners=False)
-        target = torch.nn.functional.interpolate(target, size=(112, 112), mode='bilinear', align_corners=False)
-        emb_output = self.id_model(output)
-        emb_target = self.id_model(target)
-        loss = torch.einsum('ij,ij->i', emb_output, emb_target)
+    def forward(self, prediction, target):
+        abs_error = torch.abs(prediction - target)
+
+        mask = abs_error < self.threshold
+        scaled_error = torch.where(mask, abs_error * self.scale_factor, abs_error)
+
+        loss = torch.mean(scaled_error ** 2)
         return loss

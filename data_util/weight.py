@@ -4,7 +4,7 @@ import numpy as np
 
 if __name__ == '__main__':
     # 假设有一个 (3, 22, 1, 512, 512) 的 tensor
-    tensor = torch.load('mask2.pt')  # 替换为你的实际数据
+    tensor = torch.load('mask4.pt')  # 替换为你的实际数据
 
     # 取 dim0 的第 0 个切片，形状为 (22, 1, 512, 512)
     slice_0 = tensor[0]  # (22, 1, 512, 512)

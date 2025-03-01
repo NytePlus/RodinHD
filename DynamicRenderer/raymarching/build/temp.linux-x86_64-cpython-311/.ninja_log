@@ -1,0 +1,4 @@
+# ninja log v5
+1	17417	1738213529589401087	/home/wcc/RodinHD/Renderer/raymarching/build/temp.linux-x86_64-cpython-311/home/wcc/RodinHD/Renderer/raymarching/src/bindings.o	42b913647119a03c
+1	37846	1738213549989826997	/home/wcc/RodinHD/Renderer/raymarching/build/temp.linux-x86_64-cpython-311/home/wcc/RodinHD/Renderer/raymarching/src/raymarching.o	237681954a366c6e
+22	38158	1738215748123613180	/home/wcc/RodinHD/Renderer/raymarching/build/temp.linux-x86_64-cpython-311/home/wcc/RodinHD/Renderer/raymarching/src/raymarching.o	237681954a366c6e
