@@ -261,7 +261,7 @@ class NeRFDataset:
         self.device = device
         self.type = type # train, val, test
         self.downscale = downscale
-        self.subject_id = root_path
+        self.subject_id = root_path[0]
         self.subject_id = root_path.split("/")[-1]
         self.root_path = root_path
         self.save_dir = save_dir
@@ -303,7 +303,7 @@ class NeRFDataset:
 
             self.images = None
 
-            with open(os.path.join(self.root_path,  'metadata_000000.json'), 'r') as f:
+            with open(os.path.join(self.root_path[0],  'metadata_000000.json'), 'r') as f:
                 self.meta = json.load(f)['cameras'][0] 
     
             w, h = int(self.meta['resolution'][0]/self.downscale), int(self.meta['resolution'][1]/self.downscale)
@@ -312,7 +312,7 @@ class NeRFDataset:
             self.W = w
             self.H = h
         else:
-            with open(os.path.join(self.root_path,  'metadata_000000.json'), 'r') as f:
+            with open(os.path.join(self.root_path[0],  'metadata_000000.json'), 'r') as f:
                 self.meta = json.load(f)['cameras'][0] 
     
             w, h = int(self.meta['resolution'][0]/self.downscale), int(self.meta['resolution'][1]/self.downscale)
@@ -324,11 +324,12 @@ class NeRFDataset:
             self.H = h
 
             if num_train_frames is None:
-                num_train_frames = round(len(os.listdir(self.root_path)) / 2)
+                num_train_frames = round(len(os.listdir(self.root_path[0])) / 2)
             frames = list(range(0,  num_train_frames)) if (self.training or self.type == 'test_all') else list(range(0,  5))
 
+
             def load_data(i):  
-                camera_path = os.path.join(self.root_path,   'metadata_{:06d}.json'.format(i))  
+                camera_path = os.path.join(self.root_path[0], 'metadata_{:06d}.json'.format(i))
                 with open(camera_path, 'r') as f:  
                     camera_ = json.load(f)['cameras'][0]  
             
@@ -340,26 +341,29 @@ class NeRFDataset:
                     pose = nerf_matrix_scale_translate(pose, scale=self.scale, offset=self.offset)
                 elif self.opt.dataset == 'metahuman':
                     pose = nerf_matrix_to_metahuman(pose, scale=self.scale, offset=self.offset)
-            
-                image_path = os.path.join(self.root_path,  'img_proc_fg_{:06d}.png'.format(i))  
-                image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED) # [H, W, 3] o [H, W, 4]
-                if image is None:
-                    print(f'Damaged file: {image_path}')
-                    return load_data(i - 1) if i > 0 else load_data(i + 1)
-            
-                # add support for the alpha channel as a mask.  
-                if image.shape[-1] == 3:   
-                    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  
-                else:  
-                    image = cv2.cvtColor(image, cv2.COLOR_BGRA2RGBA)  
-            
-                if image.shape[0] != self.H or image.shape[1] != self.W:  
-                    image = cv2.resize(image, (self.W, self.H), interpolation=cv2.INTER_AREA)
 
-                img_np = image
-                image = image.astype(np.float32) / 255 # [H, W, 3/4]  
+                images = []
+                for path in self.root_path:
+                    image_path = os.path.join(path,  'img_proc_fg_{:06d}.png'.format(i))
+                    image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED) # [H, W, 3] o [H, W, 4]
+                    if image is None:
+                        print(f'Damaged file: {image_path}')
+                        return load_data(i - 1) if i > 0 else load_data(i + 1)
+
+                    # add support for the alpha channel as a mask.
+                    if image.shape[-1] == 3:
+                        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                    else:
+                        image = cv2.cvtColor(image, cv2.COLOR_BGRA2RGBA)
+
+                    if image.shape[0] != self.H or image.shape[1] != self.W:
+                        image = cv2.resize(image, (self.W, self.H), interpolation=cv2.INTER_AREA)
+
+                    img_np = image
+                    image = image.astype(np.float32) / 255 # [H, W, 3/4]
+                    images.append(image)
             
-                return pose, image, img_np
+                return pose, np.stack(images, axis=0), img_np
             
             # frames = list(range(0,  num_train_frames)) if (self.training or self.type == 'test_all') else list(range(0,  200))  
             
@@ -367,12 +371,11 @@ class NeRFDataset:
                 results = list(executor.map(load_data, frames))  
             
             self.poses, self.images, self.img_nps = zip(*results)
-            self.face_box = self.get_face_box(self.img_nps[0])
             if self.type == 'train':
                 visualize_poses(self.poses, os.path.join(self.save_dir, f'gt_poses.glb'))
         self.poses = torch.from_numpy(np.stack(self.poses, axis=0)) # [N, 4, 4]
         if self.images is not None:
-            self.images = torch.from_numpy(np.stack(self.images, axis=0)) # [N, H, W, C]
+            self.images = torch.from_numpy(np.stack(self.images, axis=0)) # [N1, N2, H, W, C]
         # calculate mean radius of all camera poses
         #print(f'[INFO] dataset camera poses: radius = {self.radius:.4f}, bound = {self.bound}')
 
@@ -472,8 +475,11 @@ class NeRFDataset:
         else:
             rays = get_rays(poses, self.intrinsics, self.H, self.W, self.num_rays, error_map, self.opt.patch_size)
 
-        feat_path = os.path.join(self.feat_dir, self.subject_id + '.pt')
-        exp_feature = torch.load(feat_path)
+        exp_feature = []
+        for path in self.root_path:
+            feat_path = os.path.join(self.feat_dir, path + '.pt')
+            exp_feature.append(torch.load(feat_path).reshape(B, -1)) # [B=1, f_c]
+        exp_feature = torch.stack(exp_feature, dim=1)
 
         results = {
             'H': self.H,
@@ -484,10 +490,10 @@ class NeRFDataset:
         }
 
         if self.images is not None:
-            images = self.images[index].to(self.device) # [B, H, W, 3/4]
+            images = self.images[index].to(self.device) # [B=1, N2, H, W, 3/4]
             if self.training:
-                C = images.shape[-1]
-                images = torch.gather(images.view(B, -1, C), 1, torch.stack(C * [rays['inds']], -1)) # [B, N, 3/4]
+                B, N2, H, W, C = images
+                images = torch.gather(images.view(B, N2, -1, C), 2, torch.stack(C * [rays['inds']], -1)) # [B=1, N2, N, 3/4]
             results['images'] = images
 
         # need inds to update error_map
@@ -505,10 +511,9 @@ class NeRFDataset:
         size = len(self.poses)
         if self.training and self.rand_pose > 0:
             size += size // self.rand_pose # index >= size means we use random pose.
-        if not shuffle_rays:
-            loader = DataLoader(list(range(size)), batch_size=1, collate_fn=self.collate, shuffle=self.training, num_workers=0)
-            loader._data = self # an ugly fix... we need to access error_map & poses in trainer.
-            loader.has_gt = self.images is not None
+        loader = DataLoader(list(range(size)), batch_size=1, collate_fn=self.collate, shuffle=self.training, num_workers=0)
+        loader._data = self # an ugly fix... we need to access error_map & poses in trainer.
+        loader.has_gt = self.images is not None
 
         if self.subject_id.count('_') == 1:
             triplane_path = os.path.join(self.save_dir, self.subject_id+'.npy')

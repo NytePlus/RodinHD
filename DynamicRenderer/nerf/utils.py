@@ -509,6 +509,7 @@ class Trainer(object):
 
         rays_o = data['rays_o'] # [B, N, 3]
         rays_d = data['rays_d'] # [B, N, 3]
+        exp_f = data['exp_f']
 
         # if there is no gt image, we train with CLIP loss.
         if 'images' not in data:
@@ -527,9 +528,9 @@ class Trainer(object):
 
             return pred_rgb, None, loss
 
-        images = data['images'] # [B, N, 3/4]
+        images = data['images'] # [B, N2, N, 3/4]
 
-        B, N, C = images.shape
+        B, N2, N, C = images.shape
 
         if self.opt.color_space == 'linear':
             images[..., :3] = srgb_to_linear(images[..., :3])
@@ -545,9 +546,9 @@ class Trainer(object):
         if C == 4:
             gt_rgb = images[..., :3] * images[..., 3:] + bg_color * (1 - images[..., 3:])
         else:
-            gt_rgb = images
+            gt_rgb = images # [N1, N2, N, 3/4]
 
-        outputs = self._model(triplane, rays_o, rays_d, staged=False, bg_color=bg_color, perturb=True, force_all_rays=False if self.opt.patch_size == 1 else True, **vars(self.opt))
+        outputs = self._model(triplane, rays_o, rays_d, exp_f, staged=False, bg_color=bg_color, perturb=True, force_all_rays=False if self.opt.patch_size == 1 else True, **vars(self.opt))
         pred_rgb = outputs['image']
 
         # MSE loss
@@ -713,11 +714,7 @@ class Trainer(object):
 
         for epoch in range(self.epoch + 1, max_epochs + 1):
             self.epoch = epoch
-            # self.evaluate_one_epoch(triplane, valid_loader)
             self.train_one_epoch(triplane, train_loader, iwc_state)
-
-            # if self.workspace is not None and self.local_rank == 0:
-            #     self.save_checkpoint(full=True, best=False)
 
             if self.epoch % self.eval_interval == 0:
                 self.evaluate_one_epoch(triplane, valid_loader, all=True)

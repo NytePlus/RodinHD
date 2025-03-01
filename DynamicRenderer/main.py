@@ -203,14 +203,14 @@ if __name__ == '__main__':
 
         def split_files(all_files, n):
             prefix_groups = defaultdict(list)
-            for file_path in file_paths:
+            for file_path in all_files:
                 prefix = "_".join(os.path.basename(file_path).split("_")[:2])
                 prefix_groups[prefix].append(file_path)
 
             groups = [[] for _ in range(n)]
             for i, (prefix, files) in enumerate(prefix_groups.items()):
                 group_index = i % n
-                groups[group_index].extend(files)
+                groups[group_index].append(files)
             return groups
 
         all_ids = split_files(all_files, num_shards)[shard]
@@ -227,13 +227,13 @@ if __name__ == '__main__':
                 for subject_id in all_ids:
                     print(subject_id)
 
-                    triplane_path = os.path.join(opt.save_dir, subject_id.split('/')[-1]+'.npy')
+                    triplane_path = os.path.join(opt.save_dir, subject_id[0].split('/')[-1]+'.npy')
 
                     if os.path.exists(triplane_path) and not opt.finetune and opt.out_loop_eps == 1:
                         print('skip')
                         continue
 
-                    train_loader, triplane, iwc_state = NeRFDataset(opt,  root_path=os.path.join(opt.data_root, subject_id), save_dir=opt.save_dir, device=device, type='train', triplane_resolution=opt.resolution0, triplane_channels=opt.triplane_channels, downscale=opt.downscale, num_train_frames=None).dataloader()
+                    train_loader, triplane, iwc_state = NeRFDataset(opt,  root_path=[os.path.join(opt.data_root, id) for id in subject_id], save_dir=opt.save_dir, device=device, type='train', triplane_resolution=opt.resolution0, triplane_channels=opt.triplane_channels, downscale=opt.downscale, num_train_frames=None).dataloader()
                     triplane = triplane.reshape(3, 1, opt.triplane_channels, opt.resolution0, opt.resolution0)
                     triplane = triplane.clamp(-1.0, 1.0)
                     triplane = triplane.to(device)
@@ -252,7 +252,7 @@ if __name__ == '__main__':
                         pass
 
                     else:
-                        valid_loader, triplane_ = NeRFDataset(opt,  root_path=os.path.join(opt.data_root, subject_id), save_dir=opt.save_dir, device=device, type='val', downscale=opt.downscale, triplane_resolution=opt.resolution0, triplane_channels=opt.triplane_channels, num_train_frames=opt.num_train_frames).dataloader()
+                        valid_loader, triplane_ = NeRFDataset(opt,  root_path=[os.path.join(opt.data_root, id) for id in subject_id], save_dir=opt.save_dir, device=device, type='val', downscale=opt.downscale, triplane_resolution=opt.resolution0, triplane_channels=opt.triplane_channels, num_train_frames=opt.num_train_frames).dataloader()
 
                         max_epoch = np.ceil(opt.iters / len(train_loader)).astype(np.int32)
                         print(f'outer loop: {epoch} trainer.epoch: {trainer.epoch} \nmax epoch: {max_epoch} len(train loader): {len(train_loader)}')

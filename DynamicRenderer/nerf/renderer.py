@@ -265,22 +265,20 @@ class NeRFRenderer(nn.Module):
         }
 
 
-    def run_cuda(self, triplane, rays_o, rays_d, dt_gamma=0, bg_color=None, perturb=False, force_all_rays=False, max_steps=1024, T_thresh=1e-4, **kwargs):
+    def run_cuda(self, triplane, rays_o, rays_d, exp_f, dt_gamma=0, bg_color=None, perturb=False, force_all_rays=False, max_steps=1024, T_thresh=1e-4, **kwargs):
         # rays_o, rays_d: [B, N, 3], assumes B == 1
         # return: image: [B, N, 3], depth: [B, N]
 
         prefix = rays_o.shape[:-1]
         rays_o = rays_o.contiguous().view(-1, 3)
         rays_d = rays_d.contiguous().view(-1, 3)
+        # TODO: exp_f shape?
 
         N = rays_o.shape[0] # N = B * N, in fact
         device = rays_o.device
 
         # pre-calculate near far
-        # print(f'selfaabb_train: {self.aabb_train}')
         nears, fars = raymarching.near_far_from_aabb(rays_o, rays_d, self.aabb_train if self.training else self.aabb_infer, self.min_near)
-        # print(f'nears: {nears} far: {fars}')
-        assert not fars.isnan().any().item(), "fars contains nans."
 
         # mix background color
         if self.bg_radius > 0:
@@ -299,28 +297,14 @@ class NeRFRenderer(nn.Module):
             counter.zero_() # set to 0
             self.local_step += 1
 
-            # import time
-            # start = time.time()
             xyzs, dirs, deltas, rays = raymarching.march_rays_train(rays_o, rays_d, self.bound, self.density_bitfield, self.cascade, self.grid_size, nears, fars, counter, self.mean_count, perturb, 128, force_all_rays, dt_gamma, max_steps)
-            assert not xyzs.isnan().any().item(), "xyzs contains Nans."
-            # print(f'march ray time: {time.time() - start}')
-
-            # print(f'print: {self.mean_count} xyzs: {xyzs.shape}  x: {rays_o.shape} max_steps: {max_steps} rays: {rays[0: 10]}')
-            #plot_pointcloud(xyzs.reshape(-1, 3).detach().cpu().numpy())
-            results['rays[:, 2].min'] = rays[:, 2].min()
-            results['rays[:, 2].max'] = rays[:, 2].max()
 
             if isinstance(triplane, (list, tuple)):
-                # import time
-                # start = time.time()
-                sigmas, rgbs = self.forward_sample(triplane, xyzs, dirs, rays)
-                # print(f'forward sample time: {time.time() - start}')
+                raise 'Unsupported random ray'
             else:
-                sigmas, rgbs = self.forward_sample(triplane, xyzs, dirs)
+                sigmas, rgbs = self.forward_sample(triplane, xyzs, dirs, exp_f)
 
             sigmas = self.density_scale * sigmas
-
-            #print(f'valid RGB query ratio: {mask.sum().item() / mask.shape[0]} (total = {mask.sum().item()})')
 
             # special case for CCNeRF's residual learning
             if len(sigmas.shape) == 2:
@@ -339,7 +323,6 @@ class NeRFRenderer(nn.Module):
                 print(f'image: {image.shape}')
 
             else:
-
                 weights_sum, depth, image = raymarching.composite_rays_train(sigmas, rgbs, deltas, rays, T_thresh)
                 image = image + (1 - weights_sum).unsqueeze(-1) * bg_color
                 depth = torch.clamp(depth - nears, min=0) / (fars - nears)
@@ -563,7 +546,7 @@ class NeRFRenderer(nn.Module):
             self.mean_count = int(self.step_counter[:total_step, 0].sum().item() / total_step)
         self.local_step = 0
 
-    def forward(self, triplane, rays_o, rays_d, staged=False, max_ray_batch=4096, **kwargs):
+    def forward(self, triplane, rays_o, rays_d, exp_f, staged=False, max_ray_batch=4096, **kwargs):
         # rays_o, rays_d: [B, N, 3], assumes B == 1
         # return: pred_rgb: [B, N, 3]
 
@@ -576,6 +559,7 @@ class NeRFRenderer(nn.Module):
         device = rays_o.device
 
         # never stage when cuda_ray
+        # TODO: does it stage?
         if staged and not self.cuda_ray:
             depth = torch.empty((B, N), device=device)
             image = torch.empty((B, N, 3), device=device)
@@ -594,7 +578,7 @@ class NeRFRenderer(nn.Module):
             results['image'] = image
 
         else:
-            results = _run(triplane, rays_o, rays_d, **kwargs)
+            results = _run(triplane, rays_o, rays_d, exp_f, **kwargs)
 
         return results
 
