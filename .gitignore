@@ -7,3 +7,4 @@ script/vae_model
 Warpper/weights
 Warper/pretrained_weights
 data_util
+*.pth

@@ -176,8 +176,10 @@ class DynamicNeRFNetwork(NeRFRenderer):
         if isinstance(triplane, (list, tuple)):
             raise 'Unsupported random ray.'
         else:
-            sampled_feat = self.get_color_feat(triplane, x)
-        sampled_feat = torch.cat([sampled_feat, exp], dim=-1)
+            sampled_feat = self.get_color_feat(triplane, x) # [B, N, c]
+        B, N, c = sampled_feat.shape # exp [B, N2, fc]
+        sampled_feat = torch.cat([sampled_feat.unsqueeze(2), exp.unsqueeze(1)], dim=-1)
+        sampled_feat = sampled_feat.reshape(B, -1, c)
 
         enc_color_feat = self.encoder(sampled_feat[:, :self.color_rank[0]])
         enc_sigma_feat = self.encoder_sigma(sampled_feat[:, self.color_rank[0]:])
