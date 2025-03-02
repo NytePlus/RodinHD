@@ -1,0 +1,34 @@
+{
+    "cameras": [
+        {
+            "resolution": [
+                512,
+                512
+            ],
+            "focal_length": 10,
+            "sensor_width": 36.0,
+            "transformation": [
+                [
+                    1,
+                    1,
+                    1
+                ],
+                [
+                    1,
+                    1,
+                    1
+                ],
+                [
+                    1,
+                    1,
+                    1
+                ],
+                [
+                    1,
+                    1,
+                    1
+                ]
+            ]
+        }
+    ]
+}

@@ -24,6 +24,7 @@ if __name__ == '__main__':
     parser.add_argument('path', type=str)
     parser.add_argument('save_dir', type=str)    
     parser.add_argument('--data_root', type=str, default='')
+    parser.add_argument('--feat_root', type=str, default='')
     parser.add_argument('-O', action='store_true', help="equals --fp16 --cuda_ray --preload")
     parser.add_argument('--test', action='store_true', help="test mode")
     parser.add_argument('--ray_shuffle', action='store_true', help="Nyte's modify. train random rays instead of one avatar.")
