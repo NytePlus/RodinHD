@@ -178,7 +178,7 @@ class DynamicNeRFNetwork(NeRFRenderer):
         else:
             sampled_feat = self.get_color_feat(triplane, x) # [B, N, c]
         B, N, c = sampled_feat.shape # exp [B, N2, fc]
-        sampled_feat = torch.cat([sampled_feat.unsqueeze(2), exp.unsqueeze(1)], dim=-1)
+        sampled_feat = torch.cat([sampled_feat.unsqueeze(1), exp.unsqueeze(2)], dim=-1) # [B, N2, N, c]
         sampled_feat = sampled_feat.reshape(B, -1, c)
 
         enc_color_feat = self.encoder(sampled_feat[:, :self.color_rank[0]])

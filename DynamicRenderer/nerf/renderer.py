@@ -275,10 +275,12 @@ class NeRFRenderer(nn.Module):
         # TODO: exp_f shape?
 
         N = rays_o.shape[0] # N = B * N, in fact
+        N2 = exp_f.shape[1]
         device = rays_o.device
 
         # pre-calculate near far
-        nears, fars = raymarching.near_far_from_aabb(rays_o, rays_d, self.aabb_train if self.training else self.aabb_infer, self.min_near)
+        nears, fars = raymarching.near_far_from_aabb(rays_o, rays_d, self.aabb_train if self.training else self.aabb_infer, self.min_near) #[N, 1]
+        nears, fars = nears.repeat(N2, 1).reshape(-1), fars.repeat(N2, 1).reshape(-1)
 
         # mix background color
         if self.bg_radius > 0:
@@ -323,6 +325,9 @@ class NeRFRenderer(nn.Module):
                 print(f'image: {image.shape}')
 
             else:
+                # sigmas [N2 * N1] rgbs[N2 * N1, 3] rays[N1, 3]
+                rays = torch.cat([rays + i * N for i in range(N2)], dim = 0) # [N2 * N1, 3]
+
                 weights_sum, depth, image = raymarching.composite_rays_train(sigmas, rgbs, deltas, rays, T_thresh)
                 image = image + (1 - weights_sum).unsqueeze(-1) * bg_color
                 depth = torch.clamp(depth - nears, min=0) / (fars - nears)
@@ -339,9 +344,9 @@ class NeRFRenderer(nn.Module):
             # output should always be float32! only network inference uses half.
             dtype = torch.float32
 
-            weights_sum = torch.zeros(N, dtype=dtype, device=device)
-            depth = torch.zeros(N, dtype=dtype, device=device)
-            image = torch.zeros(N, 3, dtype=dtype, device=device)
+            weights_sum = torch.zeros(N2 * N, dtype=dtype, device=device)
+            depth = torch.zeros(N2 * N, dtype=dtype, device=device)
+            image = torch.zeros(N2 * N, 3, dtype=dtype, device=device)
 
             n_alive = N
             rays_alive = torch.arange(n_alive, dtype=torch.int32, device=device) # [N]
@@ -362,17 +367,16 @@ class NeRFRenderer(nn.Module):
                 n_step = max(min(N // n_alive, 8), 1)
                 
                 xyzs, dirs, deltas = raymarching.march_rays(n_alive, n_step, rays_alive, rays_t, rays_o, rays_d, self.bound, self.density_bitfield, self.cascade, self.grid_size, nears, fars, 128, perturb if step == 0 else False, dt_gamma, max_steps)
-                # Nyte: after marching rays, triplane and xyzs appear nan. There should be segmentation fault. But not caused by my modify.
+                # Nyte: after marching rays, triplane and xyzs appear nan. There should be segmentation fault. But not caused by my modify. -> It is pytorch version's fault
 
-                # print(f'tri: {triplane.isnan().any()} xyzs: {xyzs.isnan().any()} {xyzs.shape} dirs: {dirs.isnan().any()}')
-                sigmas, rgbs = self.forward_sample(triplane, xyzs, dirs)
+                sigmas, rgbs = self.forward_sample(triplane, xyzs, dirs, exp_f)
                 sigmas = self.density_scale * sigmas
+                N2 = round(sigmas.shape[0] / N)
+                rays_alive = torch.cat([rays_alive + i * N for i in range(N2)], dim = 0) # [N2 * N1, 3]
 
                 raymarching.composite_rays(n_alive, n_step, rays_alive, rays_t, sigmas, rgbs, deltas, weights_sum, depth, image, T_thresh)
 
                 rays_alive = rays_alive[rays_alive >= 0]
-
-                #print(f'step = {step}, n_step = {n_step}, n_alive = {n_alive}, xyzs: {xyzs.shape}')
 
                 step += n_step
 
@@ -381,8 +385,8 @@ class NeRFRenderer(nn.Module):
             image = image.view(*prefix, 3)
             depth = depth.view(*prefix)
 
-        results['depth'] = depth
-        results['image'] = image
+        results['depth'] = depth.reshape(1, N2, N, 3)
+        results['image'] = image.reshape(1, N2, N)
 
         return results
 
