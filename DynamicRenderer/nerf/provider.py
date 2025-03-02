@@ -479,7 +479,7 @@ class NeRFDataset:
         for path in self.root_path:
             feat_path = os.path.join(self.feat_dir, path + '.pt')
             exp_feature.append(torch.load(feat_path).reshape(B, -1)) # [B=1, f_c]
-        exp_feature = torch.stack(exp_feature, dim=1)
+        exp_feature = torch.stack(exp_feature, dim=1) # [B, N2, f_c]
 
         results = {
             'H': self.H,
@@ -515,10 +515,7 @@ class NeRFDataset:
         loader._data = self # an ugly fix... we need to access error_map & poses in trainer.
         loader.has_gt = self.images is not None
 
-        if self.subject_id.count('_') == 1:
-            triplane_path = os.path.join(self.save_dir, self.subject_id+'.npy')
-        else:
-            triplane_path = os.path.join(self.save_dir, '_'.join(self.subject_id.split('_')[:2])+'.npy')
+        triplane_path = os.path.join(self.save_dir, self.subject_id+'.npy')
 
         if os.path.exists(triplane_path):
             print("Loading triplane from {}".format(triplane_path))

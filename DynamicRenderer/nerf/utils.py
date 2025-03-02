@@ -635,8 +635,8 @@ class Trainer(object):
 
         outputs = self.model.render(triplane, rays_o, rays_d, staged=True, bg_color=bg_color, perturb=perturb, **vars(self.opt))
 
-        pred_rgb = outputs['image'].reshape(-1, H, W, 3)
-        pred_depth = outputs['depth'].reshape(-1, H, W)
+        pred_rgb = outputs['image']
+        pred_depth = outputs['depth']
 
         return pred_rgb, pred_depth
 
@@ -765,10 +765,11 @@ class Trainer(object):
 
         pbar = tqdm.tqdm(total=len(loader) * loader.batch_size, bar_format='{percentage:3.0f}% {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]')
         self.model.eval()
+        N2 = data['exp_f'].shape[1]
 
         if write_video:
-            all_preds = []
-            all_preds_depth = []
+            all_preds = [[]] * N2
+            all_preds_depth = [] * N2
 
         with torch.no_grad():
 
@@ -785,27 +786,29 @@ class Trainer(object):
                 if self.opt.color_space == 'linear':
                     preds = linear_to_srgb(preds)
 
-                pred = preds[0].detach().cpu().numpy()
-                pred = (pred * 255).astype(np.uint8)
+                for j, pred in enumerate(preds[0]):
+                    pred = pred.detach().cpu().numpy()
+                    pred = (pred * 255).astype(np.uint8)
 
-                pred_depth = preds_depth[0].detach().cpu().numpy()
-                pred_depth = (pred_depth * 255).astype(np.uint8)
+                    pred_depth = preds_depth[0].detach().cpu().numpy()
+                    pred_depth = (pred_depth * 255).astype(np.uint8)
 
-                if write_video:
-                    all_preds.append(pred)
-                    all_preds_depth.append(pred_depth)
-                
-                cv2.imwrite(os.path.join(save_path, f'{name}_{i:04d}_rgb.png'), cv2.cvtColor(pred, cv2.COLOR_RGB2BGR))
-                cv2.imwrite(os.path.join(save_path, f'{name}_{i:04d}_depth.png'), pred_depth)
+                    if write_video:
+                        all_preds[j].append(pred)
+                        all_preds_depth[j].append(pred_depth)
+
+                    cv2.imwrite(os.path.join(save_path, f'{name}_{i:02d}{j:02d}_rgb.png'), cv2.cvtColor(pred, cv2.COLOR_RGB2BGR))
+                    cv2.imwrite(os.path.join(save_path, f'{name}_{i:02d}{j:02d}_depth.png'), pred_depth)
 
                 pbar.update(loader.batch_size)
 
         print(f'inference time: max {max_t} s, min {min_t} s.')
         if write_video:
-            all_preds = np.stack(all_preds, axis=0)
-            all_preds_depth = np.stack(all_preds_depth, axis=0)
-            imageio.mimwrite(os.path.join(video_save_path, f'{name}_rgb.mp4'), all_preds, fps=25, quality=10, macro_block_size=1)
-            imageio.mimwrite(os.path.join(video_save_path, f'{name}_depth.mp4'), all_preds_depth, fps=25, quality=10, macro_block_size=1)
+            for j in range(N2):
+                all_preds_tensor = np.stack(all_preds[j], axis=0)
+                all_preds_depth_tensor = np.stack(all_preds_depth[j], axis=0)
+                imageio.mimwrite(os.path.join(video_save_path, f'{name}_rgb.mp4'), all_preds_tensor, fps=25, quality=10, macro_block_size=1)
+                imageio.mimwrite(os.path.join(video_save_path, f'{name}_depth.mp4'), all_preds_depth_tensor, fps=25, quality=10, macro_block_size=1)
 
         self.log(f"==> Finished Test.")
     
