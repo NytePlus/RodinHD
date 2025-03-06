@@ -12,8 +12,10 @@ from subprocess import call
 import numpy as np
 import torch as th
 
-from .nn import mean_flat
-from .losses import normal_kl, discretized_gaussian_log_likelihood
+# from .nn import mean_flat
+# from .losses import normal_kl, discretized_gaussian_log_likelihood
+from nn import mean_flat
+from losses import normal_kl, discretized_gaussian_log_likelihood
 
 def _warmup_beta(beta_start, beta_end, num_diffusion_timesteps, warmup_frac):
     betas = beta_end * np.ones(num_diffusion_timesteps, dtype=np.float64)

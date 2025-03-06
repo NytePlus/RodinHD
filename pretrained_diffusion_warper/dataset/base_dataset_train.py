@@ -15,6 +15,8 @@ from functools import partial
 def load_data(
     *,
     data_dir,
+    source_dir,
+    target_dir,
     batch_size,
     image_size,
     deterministic=False,
@@ -46,17 +48,33 @@ def load_data(
     :param random_crop: if True, randomly crop the images for augmentation.
     :param random_flip: if True, randomly flip the images for augmentation.
     """
-    if not data_dir:
+    if not target_dir:
         raise ValueError("unspecified data directory")
 
     if txt_file != '':
         with open(txt_file) as f:
             all_files = f.read().splitlines()
-        all_files = sorted([os.path.join(data_dir, x+'.npy') for x in all_files])
+        all_files = sorted([os.path.join(target_dir, x+'.npy') for x in all_files])
     else:
-        all_files = _list_image_files_recursively(data_dir) 
+        all_files = _list_image_files_recursively(target_dir) 
     if start_idx >= 0 and end_idx >= 0 and start_idx < end_idx:
         all_files = all_files[start_idx:end_idx]
+    
+    # ? modify
+    if not source_dir:
+        raise ValueError("unspecified data directory")
+    
+    # todo add source_txt_file
+    if txt_file != '':
+        with open(txt_file) as f:
+            all_source_files = f.read().splitlines()
+        all_source_files = sorted([os.path.join(source_dir, x+'.npy') for x in all_source_files])
+    else:
+        all_source_files = _list_image_files_recursively(source_dir)
+    if start_idx >= 0 and end_idx >= 0 and start_idx < end_idx:
+        all_source_files = all_source_files[start_idx:end_idx]
+    # ? modify
+
 
     print(len(all_files))
     dataset = ImageDataset(
@@ -82,10 +100,10 @@ def load_data(
     while True:
         yield from loader
 
-def _list_image_files_recursively(data_dir):
+def _list_image_files_recursively(target_dir):
     results = []
-    for entry in sorted(os.listdir(data_dir)):
-        full_path = os.path.join(data_dir, entry)
+    for entry in sorted(os.listdir(target_dir)):
+        full_path = os.path.join(target_dir, entry)
         ext = entry.split(".")[-1]
         if "." in entry and ext.lower() in ["npy"]:
             results.append(full_path)

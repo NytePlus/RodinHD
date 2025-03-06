@@ -61,6 +61,8 @@ if __name__ == '__main__':
     parser.add_argument('--resolution1', type=int, default=512)
     parser.add_argument("--upsample_model_steps", type=int, action="append", default=[])
     parser.add_argument('--grid_size', type=int, default=256)
+    parser.add_argument('--exp_encoder', type=str, default='none')
+    parser.add_argument('--feat_combine', type=str, default='concat')
 
     ### dataset options
     parser.add_argument('--color_space', type=str, default='srgb', help="Color space, supports (linear, srgb)")
@@ -112,13 +114,11 @@ if __name__ == '__main__':
     seed_everything(opt.seed)
 
     dist_util.setup_dist()
-    print('setup done.')
     device = dist_util.dev()
 
     if opt.ray_shuffle:
         raise 'Unsupported random ray.'
 
-    input_channels = opt.triplane_channels + opt.expression_channels
     model = DynamicNeRFNetwork(
         resolution=[opt.resolution0] * 3,
         bound=opt.bound,
@@ -128,9 +128,12 @@ if __name__ == '__main__':
         density_thresh=opt.density_thresh,
         bg_radius=opt.bg_radius,
         grid_size=opt.grid_size,
-        sigma_rank=[int(input_channels // 4)] * 3,
-        color_rank=[int(input_channels // 4 * 3)] * 3,
-        input_channels=input_channels,
+        sigma_rank=[int(opt.triplane_channels // 4)] * 3,
+        color_rank=[int(opt.triplane_channels // 4 * 3)] * 3,
+        exp_channels=opt.expression_channels,
+        triplane_channels=opt.triplane_channels,
+        exp_encoder=opt.exp_encoder,
+        feat_combine=opt.feat_combine,
     )
     print(model)
 
@@ -147,7 +150,7 @@ if __name__ == '__main__':
 
         psnr_list = []
         for sid in subject_id:
-            trainer = Trainer('ngp', opt, model, device=device, workspace=opt.workspace, criterion=criterion, fp16=opt.fp16, metrics=[PSNRMeter()], use_checkpoint=opt.ckpt)
+            trainer = Trainer('sum', opt, model, device=device, workspace=opt.workspace, criterion=criterion, fp16=opt.fp16, metrics=[PSNRMeter()], use_checkpoint=opt.ckpt)
 
             if opt.gui:
                 #gui = NeRFGUI(opt, trainer)
@@ -203,10 +206,13 @@ if __name__ == '__main__':
         num_shards=MPI.COMM_WORLD.Get_size()
 
         def split_files(all_files, n):
-            prefix_groups = defaultdict(list)
+            prefix_groups = dict()
             for file_path in all_files:
-                prefix = "_".join(os.path.basename(file_path).split("_")[:2])
-                prefix_groups[prefix].append(file_path)
+                prefix = "_".join(os.path.basename(file_path).split("_")[:1])
+                if prefix_groups.get(prefix):
+                    prefix_groups[prefix].append(file_path)
+                else:
+                    prefix_groups[prefix] = [file_path]
 
             groups = [[] for _ in range(n)]
             for i, (prefix, files) in enumerate(prefix_groups.items()):
@@ -215,6 +221,7 @@ if __name__ == '__main__':
             return groups
 
         all_ids = split_files(all_files, num_shards)[shard]
+        # all_ids = [[id] for id in all_files]
         print(f'shard {shard}/{num_shards} processing {len(all_ids)} avatars.')
 
         optimizer_mlp = torch.optim.Adam(model.get_params(opt.lr0, opt.lr1), betas=(0.9, 0.99), eps=1e-15)
@@ -234,13 +241,13 @@ if __name__ == '__main__':
                         print('skip')
                         continue
 
-                    train_loader, triplane, iwc_state = NeRFDataset(opt,  root_path=[os.path.join(opt.data_root, id) for id in subject_id], save_dir=opt.save_dir, device=device, type='train', triplane_resolution=opt.resolution0, triplane_channels=opt.triplane_channels, downscale=opt.downscale, num_train_frames=None).dataloader()
+                    train_loader, triplane, iwc_state = NeRFDataset(opt,  root_path=[os.path.join(opt.data_root, id) for id in subject_id], save_dir=opt.save_dir, feat_dir=opt.feat_root, device=device, type='train', triplane_resolution=opt.resolution0, triplane_channels=opt.triplane_channels, downscale=opt.downscale, num_train_frames=None).dataloader()
                     triplane = triplane.reshape(3, 1, opt.triplane_channels, opt.resolution0, opt.resolution0)
                     triplane = triplane.clamp(-1.0, 1.0)
                     triplane = triplane.to(device)
                     triplane.requires_grad = True
 
-                    optimizer_triplane = torch.optim.Adam([triplane], lr=opt.lr0/(0.1*epoch+1.), weight_decay=0.002, betas=(0.9,0.99))
+                    optimizer_triplane = torch.optim.Adam([triplane], lr=opt.lr0/(1.*epoch+1.), betas=(0.9,0.99))
                     # decay to 0.1 * init_lr at last iter step
                     scheduler = lambda optimizer: optim.lr_scheduler.LambdaLR(optimizer, lambda iter: 0.1 ** min(iter / opt.iters, 1))
 
@@ -253,7 +260,7 @@ if __name__ == '__main__':
                         pass
 
                     else:
-                        valid_loader, triplane_ = NeRFDataset(opt,  root_path=[os.path.join(opt.data_root, id) for id in subject_id], save_dir=opt.save_dir, device=device, type='val', downscale=opt.downscale, triplane_resolution=opt.resolution0, triplane_channels=opt.triplane_channels, num_train_frames=opt.num_train_frames).dataloader()
+                        valid_loader, triplane_ = NeRFDataset(opt,  root_path=[os.path.join(opt.data_root, id) for id in subject_id], save_dir=opt.save_dir, feat_dir=opt.feat_root, device=device, type='val', downscale=opt.downscale, triplane_resolution=opt.resolution0, triplane_channels=opt.triplane_channels, num_train_frames=opt.num_train_frames).dataloader()
 
                         max_epoch = np.ceil(opt.iters / len(train_loader)).astype(np.int32)
                         print(f'outer loop: {epoch} trainer.epoch: {trainer.epoch} \nmax epoch: {max_epoch} len(train loader): {len(train_loader)}')

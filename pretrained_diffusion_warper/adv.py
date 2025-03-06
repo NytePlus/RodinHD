@@ -3,8 +3,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.nn.parallel.distributed import DistributedDataParallel as DDP
-from .nn import mean_flat
-from . import dist_util
+# from .nn import mean_flat
+# from . import dist_util
+from nn import mean_flat
+import dist_util
 import functools
 
 class AdversarialLoss(nn.Module):

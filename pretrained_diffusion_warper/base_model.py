@@ -27,7 +27,7 @@ class BaseDiffusion(nn.Module):
         super().__init__()
         
         self.in_channels = in_channels
-        class_name = MultiscaleVAELatentUNet
+        class_name = BaseMultiscaleVAELatentUNet
         self.decoder = class_name(
             in_channels,
             model_channels,
@@ -48,6 +48,9 @@ class BaseDiffusion(nn.Module):
     def forward(self, xt, timesteps, ref=None, vae_ms_feature=None):
         pred = self.decoder(xt, timesteps, ref, vae_ms_feature)
         return pred
+    
+    def reverse(self, xt, timesteps, ref = None, vae_ms_feature=None):
+        return self.decoder(xt, timesteps, ref, vae_ms_feature)
 # todo 
 class BaseMultiscaleVAELatentUNet(UNetModel):
     def __init__(

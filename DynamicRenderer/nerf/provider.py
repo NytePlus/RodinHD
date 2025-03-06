@@ -41,7 +41,7 @@ def nerf_matrix_scale_translate(pose, scale=0.4, offset=[0, 0, 0]):
     ], dtype=np.float32)
     return new_pose
 
-def nerf_matrix_to_metahuman(pose, scale=1.0, offset=[0, 0, 0]):
+def nerf_matrix_to_metahuman(pose, scale=2.3, offset=[0, 0, 0]):
     new_pose = np.array([
         [pose[0, 0], pose[0, 1], pose[0, 2], pose[0, 3] * scale + offset[2]],
         [pose[1, 0], pose[1, 1], pose[1, 2], pose[1, 3] * scale + offset[0]],
@@ -261,8 +261,7 @@ class NeRFDataset:
         self.device = device
         self.type = type # train, val, test
         self.downscale = downscale
-        self.subject_id = root_path[0]
-        self.subject_id = root_path.split("/")[-1]
+        self.subject_id = root_path[0].split("/")[-1]
         self.root_path = root_path
         self.save_dir = save_dir
         self.feat_dir = feat_dir
@@ -279,6 +278,10 @@ class NeRFDataset:
         self.rand_pose = opt.rand_pose
         self.triplane_resolution = triplane_resolution
         self.triplane_channels = triplane_channels
+
+        split_list = self.subject_id.split("_")
+        if self.opt.dataset == 'metahuman':
+            self.base_id = '_'.join(split_list[:-1]) if len(split_list) > 1 else self.subject_id
 
         if self.type == 'test_video':
             scene_bbox = torch.tensor([[-self.bound, -self.bound, -self.bound], [self.bound, self.bound, self.bound]])
@@ -316,8 +319,7 @@ class NeRFDataset:
                 self.meta = json.load(f)['cameras'][0] 
     
             w, h = int(self.meta['resolution'][0]/self.downscale), int(self.meta['resolution'][1]/self.downscale)
-            # TODO:
-            self.meta['focal_length'] = 10
+            print(f'focal length: {self.meta["focal_length"]}.')
             self.focal_x =   self.meta['focal_length'] / self.meta['sensor_width']  * w
             self.focal_y =   self.meta['focal_length'] / self.meta['sensor_width']  * h
             self.W = w
@@ -325,8 +327,7 @@ class NeRFDataset:
 
             if num_train_frames is None:
                 num_train_frames = round(len(os.listdir(self.root_path[0])) / 2)
-            frames = list(range(0,  num_train_frames)) if (self.training or self.type == 'test_all') else list(range(0,  5))
-
+            frames = list(range(0,  num_train_frames)) if (self.training or self.type == 'test_all') else list(range(0, 1))
 
             def load_data(i):  
                 camera_path = os.path.join(self.root_path[0], 'metadata_{:06d}.json'.format(i))
@@ -340,7 +341,7 @@ class NeRFDataset:
                 elif self.opt.dataset == 'portrait3d':
                     pose = nerf_matrix_scale_translate(pose, scale=self.scale, offset=self.offset)
                 elif self.opt.dataset == 'metahuman':
-                    pose = nerf_matrix_to_metahuman(pose, scale=self.scale, offset=self.offset)
+                    pose = nerf_matrix_to_metahuman(pose, offset=self.offset)
 
                 images = []
                 for path in self.root_path:
@@ -364,9 +365,7 @@ class NeRFDataset:
                     images.append(image)
             
                 return pose, np.stack(images, axis=0), img_np
-            
-            # frames = list(range(0,  num_train_frames)) if (self.training or self.type == 'test_all') else list(range(0,  200))  
-            
+
             with concurrent.futures.ThreadPoolExecutor(max_workers=min(mp.cpu_count(), 16)) as executor:  
                 results = list(executor.map(load_data, frames))  
             
@@ -421,7 +420,7 @@ class NeRFDataset:
             elif self.opt.dataset == 'facescape':
                 pose = nerf_matrix_scale_translate(pose, scale=self.scale, offset=self.offset)
             elif self.opt.dataset == 'metahuman':
-                pose = nerf_matrix_to_metahuman(pose, scale=self.scale, offset=self.offset)
+                pose = nerf_matrix_to_metahuman(pose, offset=self.offset)
 
             poses.append(pose)
         return poses
@@ -477,8 +476,9 @@ class NeRFDataset:
 
         exp_feature = []
         for path in self.root_path:
-            feat_path = os.path.join(self.feat_dir, path + '.pt')
-            exp_feature.append(torch.load(feat_path).reshape(B, -1)) # [B=1, f_c]
+            base_id = path.split('/')[-1]
+            feat_path = os.path.join(self.feat_dir, base_id + '.pt')
+            exp_feature.append(torch.load(feat_path)[:self.opt.expression_channels].reshape(B, -1)) # [B=1, f_c]
         exp_feature = torch.stack(exp_feature, dim=1) # [B, N2, f_c]
 
         results = {
@@ -486,14 +486,14 @@ class NeRFDataset:
             'W': self.W,
             'rays_o': rays['rays_o'],
             'rays_d': rays['rays_d'],
-            'exp_f': exp_feature,
+            'exp_f': exp_feature.to(self.device),
         }
 
         if self.images is not None:
             images = self.images[index].to(self.device) # [B=1, N2, H, W, 3/4]
             if self.training:
-                B, N2, H, W, C = images
-                images = torch.gather(images.view(B, N2, -1, C), 2, torch.stack(C * [rays['inds']], -1)) # [B=1, N2, N, 3/4]
+                B, N2, H, W, C = images.shape
+                images = torch.gather(images.view(B, N2, -1, C), 2, torch.stack(C * [rays['inds']], -1).repeat(1, N2, 1, 1)) # [B=1, N2, N, 3/4]
             results['images'] = images
 
         # need inds to update error_map
@@ -515,7 +515,7 @@ class NeRFDataset:
         loader._data = self # an ugly fix... we need to access error_map & poses in trainer.
         loader.has_gt = self.images is not None
 
-        triplane_path = os.path.join(self.save_dir, self.subject_id+'.npy')
+        triplane_path = os.path.join(self.save_dir, self.base_id+'.npy')
 
         if os.path.exists(triplane_path):
             print("Loading triplane from {}".format(triplane_path))
@@ -530,7 +530,7 @@ class NeRFDataset:
             raise 'Unsupported random ray.'
 
         if self.training:
-            iwc_state_path = os.path.join(self.save_dir, self.subject_id+'_iwc_state.ckpt')
+            iwc_state_path = os.path.join(self.save_dir, self.base_id+'_iwc_state.ckpt')
             if os.path.exists(iwc_state_path):
                 iwc_state = torch.load(iwc_state_path, map_location='cpu')
             else:

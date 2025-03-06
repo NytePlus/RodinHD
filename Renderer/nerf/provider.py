@@ -41,7 +41,7 @@ def nerf_matrix_scale_translate(pose, scale=0.4, offset=[0, 0, 0]):
     ], dtype=np.float32)
     return new_pose
 
-def nerf_matrix_to_metahuman(pose, scale=1.0, offset=[0, 0, 0]):
+def nerf_matrix_to_metahuman(pose, scale=2.3, offset=[0, 0, 0]):
     new_pose = np.array([
         [pose[0, 0], pose[0, 1], pose[0, 2], pose[0, 3] * scale + offset[2]],
         [pose[1, 0], pose[1, 1], pose[1, 2], pose[1, 3] * scale + offset[0]],
@@ -284,7 +284,6 @@ class NeRFDataset:
             center = torch.mean(scene_bbox, dim=0)
             radius = torch.norm(scene_bbox[1]-center)*1.45
             up = [0, -1 ,0]
-            print(f'radius: {radius} gt_pose: {self.collect_gt_poses()[0]}')
 
             pos_gen = circle(radius=radius, h=0, axis='y', t0=80) #105
             self.poses = gen_path(pos_gen, at=(0., 0., 0.), up=up, frames=60)
@@ -315,6 +314,8 @@ class NeRFDataset:
                 self.meta = json.load(f)['cameras'][0] 
     
             w, h = int(self.meta['resolution'][0]/self.downscale), int(self.meta['resolution'][1]/self.downscale)
+            self.meta["focal_length"] = 40
+            print(f'focal length: {self.meta["focal_length"]}.')
             self.focal_x =   self.meta['focal_length'] / self.meta['sensor_width']  * w
             self.focal_y =   self.meta['focal_length'] / self.meta['sensor_width']  * h
             self.W = w
@@ -336,7 +337,7 @@ class NeRFDataset:
                 elif self.opt.dataset == 'portrait3d':
                     pose = nerf_matrix_scale_translate(pose, scale=self.scale, offset=self.offset)
                 elif self.opt.dataset == 'metahuman':
-                    pose = nerf_matrix_to_metahuman(pose, scale=self.scale, offset=self.offset)
+                    pose = nerf_matrix_to_metahuman(pose, offset=self.offset)
             
                 image_path = os.path.join(self.root_path,  'img_proc_fg_{:06d}.png'.format(i))  
                 image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED) # [H, W, 3] o [H, W, 4]
@@ -415,7 +416,7 @@ class NeRFDataset:
             elif self.opt.dataset == 'facescape':
                 pose = nerf_matrix_scale_translate(pose, scale=self.scale, offset=self.offset)
             elif self.opt.dataset == 'metahuman':
-                pose = nerf_matrix_to_metahuman(pose, scale=self.scale, offset=self.offset)
+                pose = nerf_matrix_to_metahuman(pose, offset=self.offset)
 
             poses.append(pose)
         return poses

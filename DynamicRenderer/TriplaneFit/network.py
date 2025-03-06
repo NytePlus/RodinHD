@@ -29,7 +29,10 @@ class DynamicNeRFNetwork(NeRFRenderer):
                  num_layers_bg=2,
                  hidden_dim_bg=64,
                  bound=1,
-                 input_channels=32,
+                 triplane_channels=32,
+                 exp_channels=32,
+                 exp_encoder='none',
+                 feat_combine='concat',
                  **kwargs
                  ):
         super().__init__(bound, **kwargs)
@@ -38,9 +41,10 @@ class DynamicNeRFNetwork(NeRFRenderer):
  
         self.sigma_rank = sigma_rank
         self.color_rank = color_rank
- 
-        self.grid_sample = GridEncoder(input_dim=2, num_levels=3, level_dim=triplane_channels, per_level_scale=1, base_resolution=resolution[0], log2_hashmap_size=19, gridtype='tiled', align_corners=True)
-
+        self.exp_encoder = exp_encoder
+        self.feat_combine = feat_combine
+        if self.feat_combine not in ['concat', 'sum']:
+            raise f'Invalid feature combine type {self.feat_combine}'
  
         # render module (default to freq feat + freq dir)
         self.num_layers = num_layers
@@ -50,7 +54,34 @@ class DynamicNeRFNetwork(NeRFRenderer):
         self.encoder_sigma, enc_dim_sigma = get_encoder('frequency', input_dim=sigma_rank[0], multires=2)
         self.encoder_dir, enc_dim_dir = get_encoder('frequency', input_dim=3, multires=2)
 
-        self.in_dim = enc_dim + enc_dim_dir + self.hidden_dim
+        if self.exp_encoder == 'warp':
+            self.encoder_xyz, enc_dim_xyz = get_encoder('frequency', input_dim=3, multires=2)
+            self.warp_net = nn.Sequential(
+                nn.Linear(enc_dim_xyz + exp_channels, hidden_dim, bias=False),
+                nn.ReLU(), nn.Linear(hidden_dim, hidden_dim, bias=False),
+                nn.ReLU(), nn.Linear(hidden_dim, 3, bias=False), nn.Tanh()
+            )
+        elif self.exp_encoder == 'mlp':
+            self.encoder_xyz, enc_dim_xyz = get_encoder('frequency', input_dim=3, multires=2)
+            self.exp_net = nn.Sequential(
+                nn.Linear(enc_dim_xyz + exp_channels, hidden_dim, bias=False),
+                nn.ReLU(), nn.Linear(hidden_dim, hidden_dim, bias=False),
+                nn.ReLU(), nn.Linear(hidden_dim, exp_channels, bias=False),
+            )
+
+        if self.exp_encoder == 'warp':
+            # CUDA version of grid_sample has no grad with grid
+            self.grid_sample = torch.nn.functional.grid_sample
+        else:
+            self.grid_sample = GridEncoder(input_dim=2, num_levels=3, level_dim=triplane_channels, per_level_scale=1, base_resolution=resolution[0], log2_hashmap_size=19, gridtype='tiled', align_corners=True)
+
+        if self.feat_combine == 'concat':
+            exp_channels = exp_channels + enc_dim_xyz if self.exp_encoder == 'warp' else exp_channels
+            self.in_dim = enc_dim + enc_dim_dir + self.hidden_dim + exp_channels
+        else:
+            if self.exp_encoder == 'warp':
+                raise ValueError('exp_encoder == warp and feat_combine == sum.')
+            self.in_dim = enc_dim + enc_dim_dir + self.hidden_dim
 
         color_net = []
         for l in range(num_layers):
@@ -69,7 +100,10 @@ class DynamicNeRFNetwork(NeRFRenderer):
         self.color_net = nn.ModuleList(color_net)
 
         sigma_net = []
-        sigma_net.append(nn.Linear(enc_dim_sigma, self.hidden_dim))
+        if self.feat_combine == 'concat':
+            sigma_net.append(nn.Linear(enc_dim_sigma + exp_channels, self.hidden_dim))
+        else:
+            sigma_net.append(nn.Linear(enc_dim_sigma, self.hidden_dim))
         sigma_net.append(nn.Softplus())
         sigma_net.append(nn.Linear(self.hidden_dim, 1+self.hidden_dim))
         self.sigma_net = nn.Sequential(*sigma_net)
@@ -130,40 +164,27 @@ class DynamicNeRFNetwork(NeRFRenderer):
         # returns projections of shape N*n_planes, M, 2
         """
         N, M, C = coordinates.shape
-        # print(f'coordinates: {coordinates.shape} planes: {planes.shape}')
         n_planes, _, _ = planes.shape
-        # print(f'coordinates.shape: {coordinates.shape} planes.shape: {planes.shape}')
         coordinates = coordinates.unsqueeze(1).expand(-1, n_planes, -1, -1).reshape(N*n_planes, M, 3)
         if inv_planes is not None:
             inv_planes = inv_planes.unsqueeze(0).expand(N, -1, -1, -1).reshape(N*n_planes, 3, 3)
         else:
             inv_planes = torch.linalg.inv(planes).unsqueeze(0).expand(N, -1, -1, -1).reshape(N*n_planes, 3, 3)
-        # print(f'coordinates: {coordinates.shape} inv_planes: {inv_planes.shape}')
         assert not coordinates.isnan().any(), "coordinates contains nans."
         projections = torch.bmm(coordinates, inv_planes)
         return projections[..., :2]
  
     def get_color_feat(self, triplane, x):
-        # import time
-        # start = time.time()
-        assert not x.isnan().any().item(), "x contains nans."
         mat_coord = self.project_onto_planes(self.plane_axes, x.unsqueeze(0), self.inv_planes)
-
-        # print(f'project time: {time.time() - start}')
-        # start = time.time()
-        # print(f'mat_coord: {mat_coord.shape}') # [3, N_sampled, 2]
-        assert not mat_coord.isnan().any().item(), "mat_coord contains nans."
-        assert not triplane.isnan().any().item(), "triplane contains nans."
-        mat_feat = torch.mean(self.grid_sample(triplane, mat_coord, self.bound), 0)
-        # print(f'grid sample time: {time.time() - start}')
-        # print(f'mat_coord: {mat_coord.shape} mat_feat: {mat_feat.shape}')
+        if self.exp_encoder == 'warp':
+            mat_feat = torch.mean(self.grid_sample(triplane.squeeze(1), mat_coord.unsqueeze(2)), 0) # [3, 32, h, w] [3, N, 1, 2] -> [32, N, 1]
+            mat_feat = mat_feat.squeeze(-1).permute(1, 0)
+        else:
+            mat_feat = torch.mean(self.grid_sample(triplane, mat_coord, self.bound), 0)
         return mat_feat
 
     def get_color_feat_batch(self, triplanes, x, rays):
-        mat_coord = self.project_onto_planes(self.plane_axes, x.unsqueeze(0), self.inv_planes)
-        mat_feat = torch.mean(self.grid_sample(triplanes, mat_coord, rays, self.bound), 0)
-
-        return mat_feat
+        raise 'unsupported random ray.'
 
     # def forward(self, triplane, x, d):
     def forward_sample(self, triplane, x, d, exp, rays = None):
@@ -171,19 +192,37 @@ class DynamicNeRFNetwork(NeRFRenderer):
         # d: [N, 3], nomalized in [-1, 1]
         # normalize to [-1, 1] inside aabb_train
         x = 2 * (x - self.aabb_train[:3]) / (self.aabb_train[3:] - self.aabb_train[:3]) - 1
-       
-        # rgb
-        if isinstance(triplane, (list, tuple)):
-            raise 'Unsupported random ray.'
-        else:
-            sampled_feat = self.get_color_feat(triplane, x) # [B, N, c]
-        B, N, c = sampled_feat.shape # exp [B, N2, fc]
-        sampled_feat = torch.cat([sampled_feat.unsqueeze(1), exp.unsqueeze(2)], dim=-1) # [B, N2, N, c]
-        sampled_feat = sampled_feat.reshape(B, -1, c)
 
-        enc_color_feat = self.encoder(sampled_feat[:, :self.color_rank[0]])
-        enc_sigma_feat = self.encoder_sigma(sampled_feat[:, self.color_rank[0]:])
-        enc_d = self.encoder_dir(d)
+        N = x.shape[0]
+        B, N2, f_c = exp.shape
+        if self.exp_encoder == 'warp':
+            enc_xyz_feat = self.encoder_xyz(x).repeat(N2, 1, 1)
+            exp = exp.permute(1, 0, 2).repeat(1, N, 1)
+            exp = torch.cat([enc_xyz_feat, exp], dim=-1).reshape(N2 * N, -1)
+            x = (x + self.warp_net(exp)).clamp(-1.0, 1.0)
+            sampled_feat = self.get_color_feat(triplane, x)
+        else:
+            sampled_feat = self.get_color_feat(triplane, x).repeat(N2, 1)
+
+        _, c = sampled_feat.shape # exp [N2 * N, fc]
+        if self.exp_encoder == 'mlp':
+            enc_xyz_feat = self.encoder_xyz(x)
+            exp = exp.permute(1, 0, 2).repeat(1, N, 1).reshape(-1, f_c)
+            exp = self.exp_net(torch.cat([enc_xyz_feat, exp], dim=-1))  # [N2 * N, f_c]
+            del enc_xyz_feat
+        elif self.exp_encoder == 'none':
+            exp = exp.permute(1, 0, 2).repeat(1, N, 1).reshape(N2 * N, -1)
+
+        if self.feat_combine == 'concat':
+            enc_color_feat = self.encoder(sampled_feat[:, :self.color_rank[0]])
+            enc_sigma_feat = self.encoder_sigma(sampled_feat[:, self.color_rank[0]:])
+            enc_color_feat = torch.cat([enc_color_feat, exp], dim=-1)
+            enc_sigma_feat = torch.cat([enc_sigma_feat, exp], dim=-1)
+        else:
+            sampled_feat = (sampled_feat + exp)
+            enc_color_feat = self.encoder(sampled_feat[:, :self.color_rank[0]])
+            enc_sigma_feat = self.encoder_sigma(sampled_feat[:, self.color_rank[0]:])
+        enc_d = self.encoder_dir(d).repeat(N2, 1)
 
         # sigma
         feat = self.sigma_net(enc_sigma_feat)
@@ -201,23 +240,44 @@ class DynamicNeRFNetwork(NeRFRenderer):
         return sigma, rgb
 
 
-    def density(self, triplane, x):
+    def density(self, triplane, x, exp):
         # x: [N, 3], in [-bound, bound]
         # normalize to [-1, 1] inside aabb_train
         x = 2 * (x - self.aabb_train[:3]) / (self.aabb_train[3:] - self.aabb_train[:3]) - 1
 
-        if isinstance(triplane, (list, tuple)):
-            sampled_feat = torch.cat([self.get_color_feat(ti, xi.unsqueeze(0)) for ti, xi in zip(triplane, x)])
-        else:
+        N = x.shape[0]
+        B, N2, f_c = exp.shape
+        if self.exp_encoder == 'warp':
+            enc_xyz_feat = self.encoder_xyz(x).repeat(N2, 1, 1)
+            exp = exp.permute(1, 0, 2).repeat(1, N, 1)
+            exp = torch.cat([enc_xyz_feat, exp], dim=-1).reshape(N2 * N, -1)
+            x = (x + self.warp_net(exp)).clamp(-1.0, 1.0)
             sampled_feat = self.get_color_feat(triplane, x)
-    
-        enc_sigma_feat = self.encoder_sigma(sampled_feat[:,self.color_rank[0]:])
+        else:
+            sampled_feat = self.get_color_feat(triplane, x).repeat(N2, 1)
+
+        _, c = sampled_feat.shape # exp [N2 * N, fc]
+        if self.exp_encoder == 'mlp':
+            enc_xyz_feat = self.encoder_xyz(x)
+            exp = exp.permute(1, 0, 2).repeat(1, N, 1).reshape(-1, f_c)
+            exp = self.exp_net(torch.cat([enc_xyz_feat, exp], dim=-1)) # [N2 * N, f_c]
+            del enc_xyz_feat
+        elif self.exp_encoder == 'none':
+            exp = exp.permute(1, 0, 2).repeat(1, N, 1).reshape(N2 * N, -1)
+
+        if self.feat_combine == 'concat':
+            enc_sigma_feat = self.encoder_sigma(sampled_feat[:,self.color_rank[0]:])
+            enc_sigma_feat = torch.cat([enc_sigma_feat, exp], dim=-1)
+        else:
+            sampled_feat = sampled_feat + exp
+            enc_sigma_feat = self.encoder_sigma(sampled_feat[:, self.color_rank[0]:])
+        del exp
 
         # sigma
         feat = self.sigma_net(enc_sigma_feat)
-        # Nyte: Is this really don't cause overflow ???
-        # sigma = trunc_exp(feat[:, 0]) #F.softplus(sigma - 1.0)
-        sigma = F.softplus(feat[:, 0])
+        sigma = trunc_exp(feat[:, 0]) #F.softplus(sigma - 1.0)
+
+        sigma = sigma.reshape(N2, N).max(dim = 0).values
 
         return {
             'sigma': sigma,
@@ -301,17 +361,42 @@ class DynamicNeRFNetwork(NeRFRenderer):
             loss = loss +  tvreg(triplane[i]) * 1e-2  
         return loss
 
-    def dist_loss(self, triplane):
+    def dist_loss(self, triplane, exp):
         initial_coordinates = torch.rand((1000, 3), device= triplane[0].device) * 2 - 1
         perturbed_coordinates = initial_coordinates + torch.randn_like(initial_coordinates) * 0.004
         x = torch.cat([initial_coordinates, perturbed_coordinates], dim=0)
 
-        sampled_feat = self.get_color_feat(triplane, x)
-        enc_sigma_feat = self.encoder_sigma(sampled_feat[:, self.color_rank[0]:])
+        N = x.shape[0]
+        B, N2, f_c = exp.shape
+        if self.exp_encoder == 'warp':
+            enc_xyz_feat = self.encoder_xyz(x).repeat(N2, 1, 1)
+            exp = exp.permute(1, 0, 2).repeat(1, N, 1)
+            exp = torch.cat([enc_xyz_feat, exp], dim=-1).reshape(N2 * N, -1)
+            x = (x + self.warp_net(exp)).clamp(-1.0, 1.0)
+            sampled_feat = self.get_color_feat(triplane, x)
+        else:
+            sampled_feat = self.get_color_feat(triplane, x).repeat(N2, 1)
+
+        _, c = sampled_feat.shape  # exp [N2 * N, fc]
+        if self.exp_encoder == 'mlp':
+            enc_xyz_feat = self.encoder_xyz(x)
+            exp = exp.permute(1, 0, 2).repeat(1, N, 1).reshape(-1, f_c)
+            exp = self.exp_net(torch.cat([enc_xyz_feat, exp], dim=-1))  # [N2 * N, f_c]
+            del enc_xyz_feat
+        elif self.exp_encoder == 'none':
+            exp = exp.permute(1, 0, 2).repeat(1, N, 1).reshape(N2 * N, -1)
+
+        if self.feat_combine == 'concat':
+            enc_sigma_feat = self.encoder_sigma(sampled_feat[:, self.color_rank[0]:])
+            enc_sigma_feat = torch.cat([enc_sigma_feat, exp], dim=-1)
+        else:
+            sampled_feat = sampled_feat + exp
+            enc_sigma_feat = self.encoder_sigma(sampled_feat[:, self.color_rank[0]:])
+        del exp
 
         # sigma
-        sigma = self.sigma_net(enc_sigma_feat)
-        sigma = trunc_exp(sigma[:, 0])
+        feat = self.sigma_net(enc_sigma_feat)
+        sigma = trunc_exp(feat[:, 0])  # F.softplus(sigma - 1.0)
         # sigma = sigma.squeeze(1)
         sigma_initial = sigma[:sigma.shape[0]//2]   
         sigma_perturbed = sigma[sigma.shape[0]//2:]
@@ -340,6 +425,11 @@ class DynamicNeRFNetwork(NeRFRenderer):
             {'params': self.sigma_net.parameters(), 'lr': lr2},
             {'params': self.color_net.parameters(), 'lr': lr2},
         ]
+        if self.exp_encoder == 'mlp':
+            params.append({'params': self.exp_net.parameters(), 'lr': lr2})
+        elif self.exp_encoder == 'warp':
+            params.append({'params': self.warp_net.parameters(), 'lr': 1e-4})
+
         if self.bg_radius > 0:
             params.append({'params': self.bg_mat, 'lr': lr1})
             params.append({'params': self.bg_net.parameters(), 'lr': lr2})
@@ -364,7 +454,7 @@ class TVLoss(nn.Module):
         return t.size()[1]*t.size()[2]*t.size()[3]
 
 # Random shuffle rays network by Nyte.
-class NeRFNetworkPlus(NeRFNetwork):
+class NeRFNetworkPlus(object):
     def __init__(self,
                  resolution=[128] * 3,
                  sigma_rank=[8] * 3,

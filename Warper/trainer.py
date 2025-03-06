@@ -32,7 +32,7 @@ def seed_everything(seed):
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
 
-class Trainer():
+class Trainer(_Trainer):
     def __init__(self,
                  name, # name of this experiment
                  opt, # extra conf
@@ -63,7 +63,7 @@ class Trainer():
                  scheduler_update_every_step=False, # whether to call scheduler.step() after every train step
                  input_shape=[256,256], # input shape of source image
                  ):
-        # super().__init__(name, opt, renderer, criterion, fp16=fp16, use_checkpoint = renderer_checkpoint, local_rank = local_rank, world_size = world_size, device = device, workspace=workspace)
+        super().__init__(name, opt, renderer, criterion, fp16=fp16, use_checkpoint = renderer_checkpoint, local_rank = local_rank, world_size = world_size, device = device, workspace=workspace)
 
         self.name = name
         self.opt = opt
@@ -147,6 +147,17 @@ class Trainer():
 
         self.log(f'[INFO] #parameters: {sum([p.numel() for p in warper.parameters() if p.requires_grad])}')
 
+        self.epoch = 0
+        self.local_step = 0
+        self.global_step = 0
+        self.stats = {
+            "loss": [],
+            "valid_loss": [],
+            "results": [],  # metrics[0], or valid_loss
+            "checkpoints": [],  # record path of saved ckpt, to automatically remove old ckpt
+            "best_result": None,
+        }
+
         if use_checkpoint == "latest":
             checkpoint_list = sorted(glob.glob(f'{self.ckpt_path}/{self.name}_ep*.pth'))
             if checkpoint_list:
@@ -162,16 +173,6 @@ class Trainer():
             self.scaler = torch.cuda.amp.GradScaler(enabled=self.fp16)
         else:
             self.scaler = torch.amp.GradScaler('cuda', enabled=self.fp16)
-
-        self.epoch = 0
-        self.local_step = 0
-        self.stats = {
-            "loss": [],
-            "valid_loss": [],
-            "results": [],  # metrics[0], or valid_loss
-            "checkpoints": [],  # record path of saved ckpt, to automatically remove old ckpt
-            "best_result": None,
-        }
 
         if lr_scheduler is None:
             self.lr_scheduler = optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda=lambda epoch: 1) # fake scheduler
@@ -503,7 +504,7 @@ class Trainer():
 
     def aborted_train_step(self, src_triplane, tgt_triplane, latent):
         with torch.cuda.amp.autocast(enabled=self.fp16):
-            delta, mask = self.warper(src_triplane, latent)
+            delta = self.warper(src_triplane, latent)
             warped_triplane = delta # * mask # (3, 32, 512, 1536)
 
             # test

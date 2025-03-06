@@ -272,15 +272,12 @@ class NeRFRenderer(nn.Module):
         prefix = rays_o.shape[:-1]
         rays_o = rays_o.contiguous().view(-1, 3)
         rays_d = rays_d.contiguous().view(-1, 3)
-        # TODO: exp_f shape?
 
-        N = rays_o.shape[0] # N = B * N, in fact
-        N2 = exp_f.shape[1]
+        B, N2, N = 1, exp_f.shape[1], rays_o.shape[0] # N = B * N, in fact
         device = rays_o.device
 
         # pre-calculate near far
         nears, fars = raymarching.near_far_from_aabb(rays_o, rays_d, self.aabb_train if self.training else self.aabb_infer, self.min_near) #[N, 1]
-        nears, fars = nears.repeat(N2, 1).reshape(-1), fars.repeat(N2, 1).reshape(-1)
 
         # mix background color
         if self.bg_radius > 0:
@@ -322,17 +319,24 @@ class NeRFRenderer(nn.Module):
 
                 depth = torch.stack(depths, axis=0) # [K, B, N]
                 image = torch.stack(images, axis=0) # [K, B, N, 3]
-                print(f'image: {image.shape}')
 
             else:
                 # sigmas [N2 * N1] rgbs[N2 * N1, 3] rays[N1, 3]
-                rays = torch.cat([rays + i * N for i in range(N2)], dim = 0) # [N2 * N1, 3]
+                rays_list = []
+                rays[-1, 2] = xyzs.shape[0] - rays[-1, 1]
+                for i in range(N2):
+                    rays_list.append(rays.clone())
+                    rays[:, 0] += rays.shape[0]
+                    rays[:, 1] += xyzs.shape[0]
+                rays_list[-1][-1, 2] = 0
+                rays = torch.cat(rays_list, dim = 0) # [N2 * N1, 3]
+                fars, nears, deltas = fars.repeat(N2), nears.repeat(N2), deltas.repeat(N2, 1)
 
                 weights_sum, depth, image = raymarching.composite_rays_train(sigmas, rgbs, deltas, rays, T_thresh)
                 image = image + (1 - weights_sum).unsqueeze(-1) * bg_color
                 depth = torch.clamp(depth - nears, min=0) / (fars - nears)
-                image = image.view(*prefix, 3)
-                depth = depth.view(*prefix)
+                image = image.view(B, N2, N, 3)
+                depth = depth.view(B, N2, N)
 
             results['weights_sum'] = weights_sum
 
@@ -371,8 +375,7 @@ class NeRFRenderer(nn.Module):
 
                 sigmas, rgbs = self.forward_sample(triplane, xyzs, dirs, exp_f)
                 sigmas = self.density_scale * sigmas
-                N2 = round(sigmas.shape[0] / N)
-                rays_alive = torch.cat([rays_alive + i * N for i in range(N2)], dim = 0) # [N2 * N1, 3]
+                rays_alive = torch.cat([rays_alive + i * N for i in range(N2)], dim = 0) if N2 > 1 else rays_alive # [N2 * N1, 3]
 
                 raymarching.composite_rays(n_alive, n_step, rays_alive, rays_t, sigmas, rgbs, deltas, weights_sum, depth, image, T_thresh)
 
@@ -385,8 +388,8 @@ class NeRFRenderer(nn.Module):
             image = image.view(*prefix, 3)
             depth = depth.view(*prefix)
 
-        results['depth'] = depth.reshape(1, N2, N, 3)
-        results['image'] = image.reshape(1, N2, N)
+        results['depth'] = depth.reshape(1, N2, N)
+        results['image'] = image.reshape(1, N2, N, 3)
 
         return results
 
@@ -456,7 +459,7 @@ class NeRFRenderer(nn.Module):
         print(f'[mark untrained grid] {(count == 0).sum()} from {self.grid_size ** 3 * self.cascade}')
 
     @torch.no_grad()
-    def update_extra_state(self, triplane,  decay=0.95, S=128):
+    def update_extra_state(self, triplane, exp, decay=0.95, S=128):
         # call before each epoch to update extra states.
 
         if not self.cuda_ray:
@@ -492,13 +495,12 @@ class NeRFRenderer(nn.Module):
                             # add noise in [-hgs, hgs]
                             cas_xyzs += (torch.rand_like(cas_xyzs) * 2 - 1) * half_grid_size
                             # query density
-                            sigmas = self.density(triplane, cas_xyzs)['sigma'].reshape(-1).detach()
+                            sigmas = self.density(triplane, cas_xyzs, exp)['sigma'].reshape(-1).detach()
                             sigmas *= self.density_scale
                             # assign
                             tmp_grid[cas, indices] = sigmas
 
         # partial update (half the computation)
-        # TODO: why no need of maxpool ?
         else:
             N = self.grid_size ** 3 // 4 # H * H * H / 4
             for cas in range(self.cascade):
@@ -522,7 +524,7 @@ class NeRFRenderer(nn.Module):
                 # add noise in [-hgs, hgs]
                 cas_xyzs += (torch.rand_like(cas_xyzs) * 2 - 1) * half_grid_size
                 # query density
-                sigmas = self.density(triplane, cas_xyzs)['sigma'].reshape(-1).detach()
+                sigmas = self.density(triplane, cas_xyzs, exp)['sigma'].reshape(-1).detach()
                 sigmas *= self.density_scale
                 # assign
                 tmp_grid[cas, indices] = sigmas

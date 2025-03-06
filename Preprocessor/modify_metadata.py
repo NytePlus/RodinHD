@@ -2,15 +2,6 @@ import json
 import os
 from tqdm import tqdm
 
-def modify_json_in_directory(directory):
-    for root, dirs, files in tqdm(os.walk(directory)):
-        for file in files:
-            if file.endswith('.json'):
-                file_path = os.path.join(root, file)
-                data = read_json(file_path)
-                modified_data = modify_focal(data)
-                write_json(modified_data, file_path)
-
 def read_json(file_path):
     with open(file_path, 'r') as file:
         try:
@@ -34,7 +25,7 @@ def modify_focal(data):
     try:
         for camera in data.get('cameras', []):
             if camera.get('focal_length', []):
-                camera['focal_length'] = 50
+                camera['focal_length'] = 40
         return data
     except:
         return None;
@@ -44,7 +35,14 @@ def write_json(data, file_path):
         with open(file_path, 'w') as file:
             json.dump(data, file, indent=4)
 
-directory_path = '../data/portrait3d_data'
-fails = []
-modify_json_in_directory(directory_path)
-print(f'unable to load {fails}')
+if __name__ == '__main__':
+    directory_path = '../data/metahuman_data'
+    fails = []
+    for root, dirs, files in tqdm(os.walk(directory_path)):
+        for file in files:
+            if file.endswith('.json'):
+                file_path = os.path.join(root, file)
+                data = read_json(file_path)
+                modified_data = modify_focal(data)
+                write_json(modified_data, file_path)
+    print(f'unable to load {fails}')

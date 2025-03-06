@@ -9,7 +9,7 @@ python main.py \
     ${save_dir} \
     --workspace ${save_dir} \
     -O \
-    --start_idx 0 --end_idx 4 \
+    --start_idx 0 --end_idx 1 \
     --bound 1.0 --scale 1 --dt_gamma 0 \
     --downscale 4 --resolution0 128 --resolution1 128 \
     --triplane_channels 8 \

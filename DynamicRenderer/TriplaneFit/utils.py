@@ -50,13 +50,14 @@ class Trainer(_Trainer):
         # l1 reg
         loss += self.model.density_loss(triplane) * self.opt.l1_reg_weight
         loss += self.model.tv_loss(triplane) * self.opt.tv_weight
-        loss += self.model.dist_loss(triplane) * self.opt.dist_weight
+        loss += self.model.dist_loss(triplane, data['exp_f'][:, :1]) * self.opt.dist_weight
         if len(iwc_state['fisher_state']) != 0 and len(iwc_state['optpar_state']) != 0:
             loss += self.model.iwc_loss(iwc_state) * self.opt.iwc_weight
         return pred_rgb, gt_rgb, loss
 
     def train_one_epoch(self, triplane_, loader, iwc_state):
         self.log(f"==> Start Training Epoch {self.epoch}, lr={self.optimizer_mlp.param_groups[0]['lr']:.6f} ..., lr={self.optimizer_triplane.param_groups[0]['lr']:.6f} ...")
+        start_time = time.time()
 
         total_loss = 0
         if self.local_rank == 0 and self.report_metric_at_train:
@@ -93,7 +94,8 @@ class Trainer(_Trainer):
             # update grid every 16 steps
             if self.model.cuda_ray and self.global_step % self.opt.update_extra_interval == 0:
                 with torch.cuda.amp.autocast(enabled=self.fp16):
-                    self.model.update_extra_state(triplane)
+                    # self.model.density_bitfield.fill_(-1)
+                    self.model.update_extra_state(triplane, data['exp_f'])
             
             self.local_step += 1
             self.global_step += 1
@@ -105,11 +107,10 @@ class Trainer(_Trainer):
                 preds, truths, loss = self.train_step(triplane, data, iwc_state)
 
             self.scaler.scale(loss).backward()
-            if self.opt.finetune:
-                _, _, c, w, h = triplane.shape
-                mask = torch.cat([torch.ones(3, 1, 2, w, h), torch.zeros(3, 1, c - 2, w, h)], dim = 2)
-                mask = mask.to(triplane_.device)
-                triplane_.grad = triplane_.grad * mask
+            # for name, param in self.model.warp_net.named_parameters():
+            #     if param.grad is not None:
+            #         print(f"Layer: {name} | {param.type()} gradient: [{param.grad.min().item()}, {param.grad.max().item()}]")
+
             self.scaler.step(self.optimizer_mlp)
             self.scaler.step(self.optimizer_triplane)
             self.scaler.update()
@@ -351,37 +352,5 @@ class Trainer(_Trainer):
 
 # Random shuffle rays Trainer by Nyte.
 class TrainerPlus(Trainer):
-    def __init__(self,
-                 name,  # name of this experiment
-                 opt,  # extra conf
-                 model,  # network
-                 all_ids,
-                 criterion=None,  # loss function, if None, assume inline implementation in train_step
-                 optimizer_mlp=None,  # optimizer
-                 optimizers_triplane=None,  # optimizers by Nyte
-                 ema_decay=None,  # if use EMA, set the decay
-                 lr_scheduler=None,  # scheduler
-                 lr_scheduler_mlp=None,
-                 metrics=[],
-                 # metrics for evaluation, if None, use val_loss to measure performance, else use the first metric.
-                 local_rank=0,  # which GPU am I
-                 world_size=1,  # total num of GPUs
-                 device=None,  # device to use, usually setting to None is OK. (auto choose device)
-                 mute=False,  # whether to mute all print
-                 fp16=False,  # amp optimize level
-                 eval_interval=1,  # eval once every $ epoch
-                 max_keep_ckpt=2,  # max num of saved ckpts in disk
-                 workspace='workspace',  # workspace to save logs & ckpts
-                 best_mode='min',  # the smaller/larger result, the better
-                 use_loss_as_metric=True,  # use loss as the first metric
-                 report_metric_at_train=False,  # also report metrics at training
-                 use_checkpoint="latest",  # which ckpt to use at init time
-                 use_tensorboardX=True,  # whether to use tensorboard for logging
-                 scheduler_update_every_step=False,  # whether to call scheduler.step() after every train step
-                 random_noise=False,  # whether to add random noise to the input,
-                 random_scale=False,  # whether to randomly scale the input
-                 restore=False,  # whether to restore output image
-                 batch_size=4096,   # batch size
-                 ):
-
+    def __init__(self, **kwargs):
         raise 'Unsupported random ray.'

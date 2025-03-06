@@ -1,4 +1,6 @@
 setup.py
+/data1/wcc/RodinHD/DynamicRenderer/raymarching/src/bindings.cpp
+/data1/wcc/RodinHD/DynamicRenderer/raymarching/src/raymarching.cu
 /data1/wcc/RodinHD/Renderer/raymarching/src/bindings.cpp
 /data1/wcc/RodinHD/Renderer/raymarching/src/raymarching.cu
 /home/wcc/RodinHD/Renderer/raymarching/src/bindings.cpp

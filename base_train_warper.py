@@ -45,6 +45,8 @@ def main():
 
     data = load_data(
         data_dir=args.data_dir,
+        source_dir=args.source_dir,
+        target_dir=args.target_dir,
         batch_size=args.batch_size,
         image_size=args.image_size,
         train=True,

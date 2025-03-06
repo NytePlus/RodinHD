@@ -405,7 +405,7 @@ class Trainer(object):
         self.criterion = criterion
 
         # optionally use LPIPS loss for patch-based training
-        if self.opt.patch_size > 1:
+        if self.opt.patch_size > 1 or self.opt.num_rays == -1:
             import lpips
             self.criterion_lpips = lpips.LPIPS(net='alex').to(self.device)
  
@@ -564,6 +564,12 @@ class Trainer(object):
 
             # LPIPS loss [not useful...]
             loss = loss + 1e-3 * self.criterion_lpips(pred_rgb, gt_rgb)
+        elif self.opt.num_rays == -1:
+            patch_size = round(math.sqrt(gt_rgb.shape[2]))
+            gt_rgb = gt_rgb.view(-1, patch_size, patch_size, 3).permute(0, 3, 1, 2).contiguous()
+            pred_rgb = pred_rgb.view(-1, patch_size, patch_size, 3).permute(0, 3, 1, 2).contiguous()
+            loss = loss + 1e-1*self.criterion_lpips(pred_rgb, gt_rgb)
+
 
         # special case for CCNeRF's rank-residual training
         if len(loss.shape) == 3: # [K, B, N]
@@ -602,7 +608,8 @@ class Trainer(object):
         rays_o = data['rays_o'] # [B, N, 3]
         rays_d = data['rays_d'] # [B, N, 3]
         images = data['images'] # [B, H, W, 3/4]
-        B, H, W, C = images.shape
+        exp_f = data['exp_f']
+        B, N2, H, W, C = images.shape
 
         if self.opt.color_space == 'linear':
             images[..., :3] = srgb_to_linear(images[..., :3])
@@ -613,11 +620,12 @@ class Trainer(object):
             gt_rgb = images[..., :3] * images[..., 3:] + bg_color * (1 - images[..., 3:])
         else:
             gt_rgb = images
-        
-        outputs = self.model(triplane, rays_o, rays_d, staged=True, bg_color=bg_color, perturb=False, **vars(self.opt))
 
-        pred_rgb = outputs['image'].reshape(B, H, W, 3)
-        pred_depth = outputs['depth'].reshape(B, H, W)
+        outputs = [
+            self.model(triplane, rays_o, rays_d, exp_f[:, i:i+1], staged=True, bg_color=bg_color, perturb=False, **vars(self.opt))
+            for i in range(N2)]
+        pred_rgb = torch.cat([output['image'] for output in outputs], dim = 1).reshape(B, N2, H, W, 3)
+        pred_depth = torch.cat([output['depth'] for output in outputs], dim = 1).reshape(B, N2, H, W)
 
         loss = self.criterion(pred_rgb, gt_rgb).mean()
 
@@ -705,6 +713,8 @@ class Trainer(object):
         # mark untrained region (i.e., not covered by any camera from the training dataset)
         if self.model.cuda_ray:
             self.model.mark_untrained_grid(train_loader._data.poses, train_loader._data.intrinsics)
+            # Nyte: I use expression code so density_grid is close to 1 at start. Which means it needn't to be trained.
+            # self.model.density_bitfield.fill_(-1)
 
         # get a ref to error_map
         self.error_map = train_loader._data.error_map
@@ -1122,36 +1132,35 @@ class Trainer(object):
                     with torch.cuda.amp.autocast(enabled=self.fp16):
                         preds, preds_depth, truths, loss = self.eval_step(triplane, data)
 
-                    
                     loss_val = loss.item()
                     total_loss += loss_val
 
-
                     for metric in self.metrics:
-                        metric.update(preds, truths)
+                        metric.update(preds[0], truths[0])
 
-                    # save image
-                    save_path = os.path.join(self.workspace, 'validation', f'{loader._data.subject_id}', f'{name}_{self.local_step:04d}_rgb.png')
-                    save_path_depth = os.path.join(self.workspace, 'validation', f'{loader._data.subject_id}', f'{name}_{self.local_step:04d}_depth.png')
+                    for j in range(preds.shape[1]):
+                        # save image
+                        save_path = os.path.join(self.workspace, 'validation', f'{loader._data.subject_id}', f'{name}_{self.local_step:02d} {j:02d}_rgb.png')
+                        save_path_depth = os.path.join(self.workspace, 'validation', f'{loader._data.subject_id}', f'{name}_{self.local_step:02d} {j:02d}_depth.png')
 
-                    #self.log(f"==> Saving validation image to {save_path}")
-                    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+                        #self.log(f"==> Saving validation image to {save_path}")
+                        os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
-                    if self.opt.color_space == 'linear':
-                        preds = linear_to_srgb(preds)
+                        pred = preds[0, j]
+                        if self.opt.color_space == 'linear':
+                            pred = linear_to_srgb(pred)
 
-                    pred = preds[0].detach().cpu().numpy()
-                    pred = (pred * 255).astype(np.uint8)
+                        pred = pred.detach().cpu().numpy()
+                        pred = (pred * 255).astype(np.uint8)
 
-                    pred_depth = preds_depth[0].detach().cpu().numpy()
-                    pred_depth = (pred_depth * 255).astype(np.uint8)
-                    
-                    cv2.imwrite(save_path, cv2.cvtColor(pred, cv2.COLOR_RGB2BGR))
-                    cv2.imwrite(save_path_depth, pred_depth)
+                        pred_depth = preds_depth[0, j].detach().cpu().numpy()
+                        pred_depth = (pred_depth * 255).astype(np.uint8)
+
+                        cv2.imwrite(save_path, cv2.cvtColor(pred, cv2.COLOR_RGB2BGR))
+                        cv2.imwrite(save_path_depth, pred_depth)
 
                     pbar.set_description(f"loss={loss_val:.4f} ({total_loss/self.local_step:.4f})")
                     pbar.update(loader.batch_size)
-
 
             average_loss = total_loss / self.local_step
             self.stats["valid_loss"].append(average_loss)

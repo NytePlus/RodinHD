@@ -98,19 +98,19 @@ if __name__ == "__main__":
         opt.fp16 = True
         opt.cuda_ray = True
 
-    # renderer = NeRFNetwork(
-    #     resolution=[opt.resolution0] * 3,
-    #     bound=opt.bound,
-    #     cuda_ray=opt.cuda_ray,
-    #     density_scale=1,
-    #     min_near=opt.min_near,
-    #     density_thresh=opt.density_thresh,
-    #     bg_radius=opt.bg_radius,
-    #     grid_size=opt.grid_size,
-    #     sigma_rank=[int(opt.triplane_channels // 4)] * 3,
-    #     color_rank=[int(opt.triplane_channels // 4 * 3)] * 3,
-    #     triplane_channels=opt.triplane_channels,
-    # )
+    renderer = NeRFNetwork(
+        resolution=[opt.resolution0] * 3,
+        bound=opt.bound,
+        cuda_ray=opt.cuda_ray,
+        density_scale=1,
+        min_near=opt.min_near,
+        density_thresh=opt.density_thresh,
+        bg_radius=opt.bg_radius,
+        grid_size=opt.grid_size,
+        sigma_rank=[int(opt.triplane_channels // 4)] * 3,
+        color_rank=[int(opt.triplane_channels // 4 * 3)] * 3,
+        triplane_channels=opt.triplane_channels,
+    )
 
     discriminator, optimizer_d, motion_extractor, optimizer_me = None, None, None, None
     if False:
@@ -168,7 +168,7 @@ if __name__ == "__main__":
 
         discriminator = Discriminator(input_channels = 8)
         optimizer_d = torch.optim.Adam(discriminator.parameters(), lr=1e-4, betas=(0.9, 0.99), eps=1e-8)
-    elif True:
+    elif False:
         warper = WarpingNetwork(
             xf_width=256,
             model_channels=32,
@@ -188,9 +188,11 @@ if __name__ == "__main__":
         )
     else:
         warper = LightWarpingNetwork(
+            in_channels=8,
             scale = 3,
             image_size=512,
-            n_feats=32,
+            n_feats=8,
+            condition_channels=8,
             use_fp16=False,
             use_checkpoint=True,
             ch_mult=[2, 4],
@@ -200,9 +202,6 @@ if __name__ == "__main__":
             n_resblocks=2,
             latent_type="emo",
         )
-        motion_extractor = None
-        optimizer_me = None
-        # half cannot coexist with autocast?
 
     criterion = nn.MSELoss(reduction='mean')
     if optimizer_d:
@@ -213,7 +212,7 @@ if __name__ == "__main__":
     scheduler = lambda optimizer: optim.lr_scheduler.LambdaLR(optimizer, lambda iter: 1 ** min(iter / opt.num_epochs, 1))
     shard = MPI.COMM_WORLD.Get_rank()
     num_shards = MPI.COMM_WORLD.Get_size()
-    trainer = Trainer('snapshot_2b', opt, None, warper, motion_extractor, discriminator, local_rank=shard, world_size=num_shards, device=device, workspace=opt.workspace, optimizer=optimizer, optimizer_me=optimizer_me, optimizer_d=optimizer_d, criterion=criterion, fp16=opt.fp16, lr_scheduler=scheduler, scheduler_update_every_step=False, metrics=[PSNRMeter()], use_checkpoint=opt.ckpt, renderer_checkpoint=opt.r_ckpt, eval_interval=opt.eval_freq)
+    trainer = Trainer('snapshot_3', opt, None, warper, motion_extractor, discriminator, local_rank=shard, world_size=num_shards, device=device, workspace=opt.workspace, optimizer=optimizer, optimizer_me=optimizer_me, optimizer_d=optimizer_d, criterion=criterion, fp16=opt.fp16, lr_scheduler=scheduler, scheduler_update_every_step=False, metrics=[PSNRMeter()], use_checkpoint=opt.ckpt, renderer_checkpoint=opt.r_ckpt, eval_interval=opt.eval_freq)
 
     if opt.debug and False:
         x1 = trainer.prepare_source(np.ones((1, 1024, 1024, 3)))
@@ -244,8 +243,8 @@ if __name__ == "__main__":
     # train_loader = TriplaneDataset(opt.src_root, opt.src_data, opt.tgt_root, opt.tgt_data, all_ids, device, batch_size=opt.batch_size, local_rank=shard, world_size=num_shards).dataloader()
     # train_loader = TriplaneImageDataset(opt, opt.src_root, opt.tgt_data, opt.latent_root, resolution=opt.resolution0, all_ids=all_ids, device=device).dataloader()
 
-    # train_loader = TriplaneLatentDataset(opt.src_root, opt.tgt_root, opt.tgt_data, opt.latent_root, latent_type=opt.latent_type, triplane_channel=opt.triplane_channels, resolution=opt.resolution0, all_ids=all_ids, device=device, batch_size=opt.batch_size, local_rank=shard, world_size=num_shards).dataloader()
-    train_loader = TriplaneFeatureDataset(opt.src_root, opt.tgt_root, opt.tgt_data, opt.ms_feature_root, preload_mm=True, triplane_channels=opt.triplane_channels, resolution=opt.resolution0, all_ids=all_ids, device=device, batch_size=opt.batch_size, local_rank=shard, world_size=num_shards).dataloader()
+    train_loader = TriplaneLatentDataset(opt.src_root, opt.tgt_root, opt.tgt_data, opt.latent_root, latent_type=opt.latent_type, triplane_channel=opt.triplane_channels, resolution=opt.resolution0, all_ids=all_ids, device=device, batch_size=opt.batch_size, local_rank=shard, world_size=num_shards).dataloader()
+    # train_loader = TriplaneFeatureDataset(opt.src_root, opt.tgt_root, opt.tgt_data, opt.ms_feature_root, preload_mm=True, triplane_channels=opt.triplane_channels, resolution=opt.resolution0, all_ids=all_ids, device=device, batch_size=opt.batch_size, local_rank=shard, world_size=num_shards).dataloader()
 
     # train_loader = TriplaneImagesDataset(opt, opt.src_root, opt.src_data, opt.tgt_data, all_ids, device, opt.resolution0, local_rank=shard, world_size=num_shards).dataloader()
 

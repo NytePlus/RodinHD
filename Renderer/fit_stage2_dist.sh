@@ -10,7 +10,7 @@ mpirun -np 4 python main.py \
     ${fitting_obj_list} \
     ${save_dir} \
     --workspace ${save_dir} \
-    -O --start_idx 0 --end_idx 891 \
+    -O --start_idx 0 --end_idx 1 \
     -finetune \
     --bound 1.0 --scale 1 --dt_gamma 0 \
     --downscale 4 --resolution0 128 --resolution1 128 \

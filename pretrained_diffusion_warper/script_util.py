@@ -1,10 +1,15 @@
 import math
 import argparse
 
-from . import gaussian_diffusion as gd
-from .respace import SpacedDiffusion, space_timesteps
-from .base_model import  BaseDiffusion 
-from .upsample_model import TriplaneUpsampler
+# from . import gaussian_diffusion as gd
+# from .respace import SpacedDiffusion, space_timesteps
+# from .base_model import  BaseDiffusion 
+# from .upsample_model import TriplaneUpsampler
+import gaussian_diffusion as gd
+from respace import SpacedDiffusion, space_timesteps
+from base_model import  BaseDiffusion 
+from upsample_model import TriplaneUpsampler
+
  
 
 def model_and_diffusion_defaults(super_res=0):

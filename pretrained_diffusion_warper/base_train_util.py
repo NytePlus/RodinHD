@@ -8,21 +8,40 @@ import torch as th
 import torch.distributed as dist
 from torch.nn.parallel.distributed import DistributedDataParallel as DDP
 from torch.optim import AdamW
-from . import dist_util, logger
-from .fp16_util import (
+
+
+# from . import dist_util, logger
+# from .fp16_util import (
+#     make_master_params,
+#     master_params_to_model_params,
+#     model_grads_to_master_grads,
+#     unflatten_master_params,
+#     zero_grad,
+# )
+# from .nn import update_ema
+# from .losses import  TVLoss
+# from .adv import AdversarialLoss
+# from .resample import LossAwareSampler, UniformSampler
+# import glob
+# from .lpips.lpips import LPIPS
+# from .visualizer import Visualizer
+# from .script_util import create_model_and_diffusion
+import dist_util, logger
+from fp16_util import (
     make_master_params,
     master_params_to_model_params,
     model_grads_to_master_grads,
     unflatten_master_params,
     zero_grad,
 )
-from .nn import update_ema
-from .losses import  TVLoss
-from .adv import AdversarialLoss
-from .resample import LossAwareSampler, UniformSampler
+from nn import update_ema
+from losses import  TVLoss
+from adv import AdversarialLoss
+from resample import LossAwareSampler, UniformSampler
 import glob
-from .lpips.lpips import LPIPS
-from .visualizer import Visualizer
+from lpips.lpips import LPIPS
+from visualizer import Visualizer
+from script_util import create_model_and_diffusion
 # For ImageNet experiments, this was a good default value.
 # We found that the lg_loss_scale quickly climbed to
 # 20-21 within the first ~1K steps of training.
@@ -105,7 +124,7 @@ class TrainLoop:
         self.uncond_p =uncond_p
         self.mode = mode
 
-        self.finetune_decoder = finetune_decoder
+        self.finetune_decoder = finetune_decoder #! finetune_decoder=false
         if finetune_decoder:
             self.optimize_model = self.model
         else:          
@@ -232,7 +251,11 @@ class TrainLoop:
             micro_cond={n:model_kwargs[n][i:i+self.microbatch].to(dist_util.dev()) for n in model_kwargs if n  in ['ref',]}
             micro_cond['vae_ms_feature'] = [tensor[i:i+self.microbatch].to(dist_util.dev()) for tensor in model_kwargs['vae_ms_feature']]
             last_batch = (i + self.microbatch) >= batch.shape[0]
+
             t, weights = self.schedule_sampler.sample(micro.shape[0], dist_util.dev())
+            print('t:',t)
+            print(t.shape)
+            print('weights:',weights)
                     
             vgg_loss = self.vgg
             adv_loss = self.adv
@@ -419,3 +442,14 @@ def log_loss_dict(diffusion, ts, losses):
             quartile = int(4 * sub_t / diffusion.num_timesteps)
             logger.logkv_mean(f"{key}_q{quartile}", sub_loss)
 
+
+
+if __name__ == "__main__":
+    ar="uniform"
+    model, diffusion = create_model_and_diffusion()
+    schedule_sampler = UniformSampler(diffusion)
+    t, weights = schedule_sampler.sample(1, "cpu")
+    print('t:',t)
+    print(t.shape)
+    print('weights:',weights)
+    print(weights.shape)

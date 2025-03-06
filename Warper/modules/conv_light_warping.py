@@ -224,7 +224,7 @@ class ResnetBlock(nn.Module):
         self.use_checkpoint = use_checkpoint
         self.use_scale_shift_norm = use_scale_shift_norm
 
-        self.norm1 = Normalize(in_channels)
+        self.norm1 = Normalize(in_channels, num_groups=8)
         self.conv1 = th.nn.Conv2d(in_channels,
                                   out_channels,
                                   kernel_size=3,
@@ -233,7 +233,7 @@ class ResnetBlock(nn.Module):
         if temb_channels > 0:
             self.temb_proj = th.nn.Linear(temb_channels,
                                           2 * out_channels if use_scale_shift_norm else out_channels)
-        self.norm2 = Normalize(out_channels)
+        self.norm2 = Normalize(out_channels, num_groups=8)
         self.dropout = th.nn.Dropout(dropout)
         # TODO: add conv axis
         if use_3d_conv:
@@ -298,7 +298,7 @@ class ResnetBlock(nn.Module):
         return x + h
 
 class LightWarpingNetwork(nn.Module):
-    def __init__(self, scale=4, image_size=256, n_feats=64, n_resblocks=6, kernel_size=3, use_fp16=False,
+    def __init__(self, scale=4, image_size=256, n_feats=64, n_resblocks=6, kernel_size=3, in_channels=32,use_fp16=False,
                  use_checkpoint=False, ch_mult=[1, 2], use_scale_shift_norm=False, use_3d_conv=True,
                  condition_channels=32, dtype="32", latent_type="emo"):
         super(LightWarpingNetwork, self).__init__()
@@ -306,6 +306,7 @@ class LightWarpingNetwork(nn.Module):
         self.n_feats = n_feats
         self.temb_ch = n_feats * 4
         self.num_res_blocks = 1
+        self.in_channels = in_channels
         self.num_resolutions = len(ch_mult)
         self.dtype = th.float16 if dtype == "16" else th.float32
         self.use_checkpoint = use_checkpoint
@@ -318,7 +319,7 @@ class LightWarpingNetwork(nn.Module):
         resamp_with_conv = True
         use_3d_conv = use_3d_conv
 
-        self.input_layer = EmbedSequential(conv_nd(2, 32, n_feats, kernel_size, padding=(kernel_size // 2)),
+        self.input_layer = EmbedSequential(conv_nd(2, self.in_channels, n_feats, kernel_size, padding=(kernel_size // 2)),
                                                    ResnetBlock(in_channels=n_feats, out_channels=ch * in_ch_mult[0],
                                                                temb_channels=self.temb_ch, dropout=0,
                                                                use_3d_conv=use_3d_conv, use_checkpoint=use_checkpoint,
@@ -393,7 +394,7 @@ class LightWarpingNetwork(nn.Module):
             ResnetBlock(in_channels=block_in + n_feats + condition_channels, out_channels=n_feats,
                         temb_channels=self.temb_ch, dropout=0, use_3d_conv=use_3d_conv, use_checkpoint=use_checkpoint,
                         use_scale_shift_norm=use_scale_shift_norm),
-            ResnetBlock(in_channels=n_feats, out_channels=32, temb_channels=self.temb_ch, dropout=0,
+            ResnetBlock(in_channels=n_feats, out_channels=condition_channels, temb_channels=self.temb_ch, dropout=0,
                         use_3d_conv=use_3d_conv, use_checkpoint=use_checkpoint,
                         use_scale_shift_norm=use_scale_shift_norm),
         ]
@@ -405,7 +406,7 @@ class LightWarpingNetwork(nn.Module):
 
         self.conv1 = nn.Conv2d(in_channels=4, out_channels=encoder_dim, kernel_size=patch_size, stride=patch_size,
                                bias=False)
-        self.fc1 = nn.Linear(in_features=256, out_features=encoder_dim, bias=False)
+        encoder_dim = 50
         if encoder_dim != self.temb_ch:
             self.encoder_proj = nn.Linear(encoder_dim, self.temb_ch)
         else:
@@ -420,7 +421,7 @@ class LightWarpingNetwork(nn.Module):
         self.transformer_proj = nn.Identity()
         self.body = EmbedSequential(*m_body)
         self.tail = EmbedSequential(*m_tail)
-        self.out = ResnetBlock(in_channels=condition_channels, out_channels=32, temb_channels=0, dropout=0,
+        self.out = ResnetBlock(in_channels=condition_channels, out_channels=self.in_channels, temb_channels=0, dropout=0,
                                use_3d_conv=use_3d_conv, use_checkpoint=use_checkpoint,
                                use_scale_shift_norm=use_scale_shift_norm)
 
@@ -461,8 +462,7 @@ class LightWarpingNetwork(nn.Module):
                                                             -1)  # shape = [*, width, grid ** 2]
             latent_outputs_emb = latent_outputs_emb.permute(0, 2, 1)  # shape = [*, grid ** 2, width]
         elif self.latent_type == 'emo':
-            emo_outputs = (ref * self.scaling_factor).type(self.dtype)
-            latent_outputs_emb = self.fc1(emo_outputs).unsqueeze(1)
+            latent_outputs_emb = (ref * self.scaling_factor).type(self.dtype).unsqueeze(1)
 
         encoder_out = self.encoder_proj(latent_outputs_emb)
         encoder_out = encoder_out.permute(0, 2, 1)  # NLC -> NCL
