@@ -23,8 +23,13 @@ rule cuda_compile
 
 
 
+<<<<<<< HEAD
 build /data1/wcc/RodinHD/DynamicRenderer/raymarching/build/temp.linux-x86_64-cpython-39/data1/wcc/RodinHD/DynamicRenderer/raymarching/src/bindings.o: compile /data1/wcc/RodinHD/DynamicRenderer/raymarching/src/bindings.cpp
 build /data1/wcc/RodinHD/DynamicRenderer/raymarching/build/temp.linux-x86_64-cpython-39/data1/wcc/RodinHD/DynamicRenderer/raymarching/src/raymarching.o: cuda_compile /data1/wcc/RodinHD/DynamicRenderer/raymarching/src/raymarching.cu
+=======
+build /data1/wcc/RodinHD/Renderer/raymarching/build/temp.linux-x86_64-cpython-39/data1/wcc/RodinHD/Renderer/raymarching/src/bindings.o: compile /data1/wcc/RodinHD/Renderer/raymarching/src/bindings.cpp
+build /data1/wcc/RodinHD/Renderer/raymarching/build/temp.linux-x86_64-cpython-39/data1/wcc/RodinHD/Renderer/raymarching/src/raymarching.o: cuda_compile /data1/wcc/RodinHD/Renderer/raymarching/src/raymarching.cu
+>>>>>>> e9912a4c388a1b07bfc91e4ec08ea32415a60e99
 
 
 

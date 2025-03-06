@@ -2,6 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
+<<<<<<< HEAD
             "name": "Python: difference",
             "type": "debugpy",
             "request": "launch",
@@ -94,10 +95,61 @@
             ],
             "env": {
                 "CUDA_VISIBLE_DEVICES": "6,7"
+=======
+            "name": "Python: upsample_train.py",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "/home/wcc/RodinHD/upsample_train.py",
+            "args": [
+                "--learn_sigma", "False",
+                "--uncond_p", "0",
+                "--image_size", "512",
+                "--super_res", "128",
+                "--finetune_decoder", "True",
+                "--diffusion_steps", "100",
+                "--predict_xstart", "True",
+                "--n_feats", "64",
+                "--ch_mult", "1", "2", "4",
+                "--local_rank", "0",
+                "--predict_type", "xstart",
+                "--decoder_type", "vae_latent",
+                "--lr", "1e-5",
+                "--batch_size", "1",
+                "--schedule_sampler", "uniform",
+                "--use_tv", "False",
+                "--exp_name", "/home/wcc/RodinHD/data/save_updiffusion",
+                "--log_interval", "100",
+                "--save_interval", "5000",
+                "--render_weight", "1",
+                "--render_lpips_weight", "0.5",
+                "--patch_size", "64",
+                "--dtype", "16",
+                "--use_renderer", "/home/wcc/RodinHD/data/save_triplane_and_mlp2/checkpoints/ngp_ep0017.pth.pth",
+                "--use_checkpoint", "True",
+                "--use_vgg", "True",
+                "--num_samples", "10000",
+                "--data_dir", "/home/wcc/RodinHD/data/save_triplane_and_mlp2",
+                "--image_root", "/home/wcc/RodinHD/data/portrait3d_data",
+                "--mode", "triplane",
+                "--start_idx", "0",
+                "--end_idx", "10000",
+                "--txt_file", "/home/wcc/RodinHD/data/save_triplane_and_mlp2/fitting_obj_list.txt",
+                "--latent_root", "/home/wcc/RodinHD/data/feature/latent",
+                "--noise_schedule", "sigmoid",
+                "--num_samples", "10",
+                "--sample_c", "1.0",
+                "--deepspeed_config", "pretrained_diffusion/configs/upsample_deepspeed.json"
+            ],
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "7"
+>>>>>>> e9912a4c388a1b07bfc91e4ec08ea32415a60e99
             },
             "console": "integratedTerminal"
         }
     ]
 }
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> e9912a4c388a1b07bfc91e4ec08ea32415a60e99

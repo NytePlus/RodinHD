@@ -23,8 +23,13 @@ rule cuda_compile
 
 
 
+<<<<<<< HEAD
 build /data1/wcc/RodinHD/DynamicRenderer/gridencoder/build/temp.linux-x86_64-cpython-39/data1/wcc/RodinHD/DynamicRenderer/gridencoder/src/bindings.o: compile /data1/wcc/RodinHD/DynamicRenderer/gridencoder/src/bindings.cpp
 build /data1/wcc/RodinHD/DynamicRenderer/gridencoder/build/temp.linux-x86_64-cpython-39/data1/wcc/RodinHD/DynamicRenderer/gridencoder/src/gridencoder.o: cuda_compile /data1/wcc/RodinHD/DynamicRenderer/gridencoder/src/gridencoder.cu
+=======
+build /data1/wcc/RodinHD/Renderer/gridencoder/build/temp.linux-x86_64-cpython-39/data1/wcc/RodinHD/Renderer/gridencoder/src/bindings.o: compile /data1/wcc/RodinHD/Renderer/gridencoder/src/bindings.cpp
+build /data1/wcc/RodinHD/Renderer/gridencoder/build/temp.linux-x86_64-cpython-39/data1/wcc/RodinHD/Renderer/gridencoder/src/gridencoder.o: cuda_compile /data1/wcc/RodinHD/Renderer/gridencoder/src/gridencoder.cu
+>>>>>>> e9912a4c388a1b07bfc91e4ec08ea32415a60e99
 
 
 
