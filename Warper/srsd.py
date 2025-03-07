@@ -9,7 +9,7 @@ pipe = StableDiffusionPipeline.from_pretrained("stabilityai/stable-diffusion-2-1
 unet = pipe.unet.to("cuda")
 
 # 加载表情编码
-emotion_embeddings = torch.load("emotion_embeddings.pt").to("cuda")
+emotion_embeddings = torch.load("emotion_embeddings.pt").to("cuda") # data/metahuman_exp (1, 50)
 
 # 定义超分辨率模型
 class SuperResolutionUNet(nn.Module):
@@ -34,7 +34,7 @@ class SuperResolutionUNet(nn.Module):
 model = SuperResolutionUNet(unet).to("cuda")
 
 # 加载数据集
-dataset = load_dataset("your_dataset")
+dataset = load_dataset("your_dataset") # /data1/wcc/RodinHD/data/save_expression_mlp6/validation/1/ngp_ep0036_01 00_rgb.png
 
 # 定义数据预处理函数
 def preprocess(examples):

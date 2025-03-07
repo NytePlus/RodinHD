@@ -622,3 +622,5 @@ class NeRFRenderer(nn.Module):
             results = _run(triplane, rays_o, rays_d, **kwargs)
 
         return results
+
+

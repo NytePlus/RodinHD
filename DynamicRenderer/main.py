@@ -221,7 +221,7 @@ if __name__ == '__main__':
             return groups
 
         all_ids = split_files(all_files, num_shards)[shard]
-        # all_ids = [[id] for id in all_files]
+        # all_ids = [[id] for id in all_files[shard:][::num_shards]]
         print(f'shard {shard}/{num_shards} processing {len(all_ids)} avatars.')
 
         optimizer_mlp = torch.optim.Adam(model.get_params(opt.lr0, opt.lr1), betas=(0.9, 0.99), eps=1e-15)

@@ -58,8 +58,8 @@ class DynamicNeRFNetwork(NeRFRenderer):
             self.encoder_xyz, enc_dim_xyz = get_encoder('frequency', input_dim=3, multires=2)
             self.warp_net = nn.Sequential(
                 nn.Linear(enc_dim_xyz + exp_channels, hidden_dim, bias=False),
-                nn.ReLU(), nn.Linear(hidden_dim, hidden_dim, bias=False),
-                nn.ReLU(), nn.Linear(hidden_dim, 3, bias=False), nn.Tanh()
+                *([nn.ReLU(), nn.Linear(hidden_dim, hidden_dim, bias=False)] * 3),
+                nn.ReLU(), nn.Linear(hidden_dim, 3, bias=False)
             )
         elif self.exp_encoder == 'mlp':
             self.encoder_xyz, enc_dim_xyz = get_encoder('frequency', input_dim=3, multires=2)
@@ -199,7 +199,7 @@ class DynamicNeRFNetwork(NeRFRenderer):
             enc_xyz_feat = self.encoder_xyz(x).repeat(N2, 1, 1)
             exp = exp.permute(1, 0, 2).repeat(1, N, 1)
             exp = torch.cat([enc_xyz_feat, exp], dim=-1).reshape(N2 * N, -1)
-            x = (x + self.warp_net(exp)).clamp(-1.0, 1.0)
+            x = (x.repeat(N2, 1) + self.warp_net(exp)).clamp(-1.0, 1.0)
             sampled_feat = self.get_color_feat(triplane, x)
         else:
             sampled_feat = self.get_color_feat(triplane, x).repeat(N2, 1)
@@ -251,7 +251,7 @@ class DynamicNeRFNetwork(NeRFRenderer):
             enc_xyz_feat = self.encoder_xyz(x).repeat(N2, 1, 1)
             exp = exp.permute(1, 0, 2).repeat(1, N, 1)
             exp = torch.cat([enc_xyz_feat, exp], dim=-1).reshape(N2 * N, -1)
-            x = (x + self.warp_net(exp)).clamp(-1.0, 1.0)
+            x = (x.repeat(N2, 1) + self.warp_net(exp)).clamp(-1.0, 1.0)
             sampled_feat = self.get_color_feat(triplane, x)
         else:
             sampled_feat = self.get_color_feat(triplane, x).repeat(N2, 1)
@@ -372,7 +372,7 @@ class DynamicNeRFNetwork(NeRFRenderer):
             enc_xyz_feat = self.encoder_xyz(x).repeat(N2, 1, 1)
             exp = exp.permute(1, 0, 2).repeat(1, N, 1)
             exp = torch.cat([enc_xyz_feat, exp], dim=-1).reshape(N2 * N, -1)
-            x = (x + self.warp_net(exp)).clamp(-1.0, 1.0)
+            x = (x.repeat(N2, 1) + self.warp_net(exp)).clamp(-1.0, 1.0)
             sampled_feat = self.get_color_feat(triplane, x)
         else:
             sampled_feat = self.get_color_feat(triplane, x).repeat(N2, 1)
